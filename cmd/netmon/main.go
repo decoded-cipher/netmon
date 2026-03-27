@@ -25,8 +25,14 @@ func main() {
 	}
 	defer s.Close()
 
-	// Load saved config from DB; fall back to compile-time defaults.
-	cfg := monitor.DefaultConfig()
+	// Priority: DB saved config > config.json > hardcoded defaults.
+	cfg, err := monitor.LoadConfigFile("config.json")
+	if err != nil {
+		log.Error("config file error, using defaults", "error", err)
+		cfg = monitor.DefaultConfig()
+	} else {
+		log.Info("loaded config from config.json")
+	}
 	if cs, err := s.GetConfig(); err == nil {
 		cfg = monitor.ConfigFromStore(cs)
 		log.Info("loaded config from database")
