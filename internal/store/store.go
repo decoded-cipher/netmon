@@ -150,6 +150,45 @@ func (s *Store) GetHistory(limit int) ([]Measurement, error) {
 	return results, nil
 }
 
+func (s *Store) GetHistoryWindow(minutes int) ([]Measurement, error) {
+	cutoff := time.Now().Add(-time.Duration(minutes) * time.Minute).Format(time.RFC3339)
+	rows, err := s.db.Query(
+		`SELECT id, ts, network_id, latency, jitter, packet_loss, download, upload, dns
+		 FROM measurements WHERE ts >= ? ORDER BY ts ASC`, cutoff,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var timeFmt string
+	switch {
+	case minutes > 1440:
+		timeFmt = "Jan 02 15:04"
+	case minutes > 60:
+		timeFmt = "15:04"
+	default:
+		timeFmt = "15:04:05"
+	}
+
+	var results []Measurement
+	for rows.Next() {
+		var m Measurement
+		var ts string
+		if err := rows.Scan(&m.ID, &ts, &m.NetworkID, &m.Latency, &m.Jitter, &m.PacketLoss, &m.Download, &m.Upload, &m.DNS); err != nil {
+			return nil, err
+		}
+		t, _ := time.Parse(time.RFC3339, ts)
+		m.Time = t.Format(timeFmt)
+		results = append(results, m)
+	}
+
+	if results == nil {
+		results = []Measurement{}
+	}
+	return results, nil
+}
+
 // --- Summary ---
 
 type Summary struct {

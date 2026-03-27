@@ -158,13 +158,60 @@
         50% { opacity: 0.4; }
       }
 
-      .select-input {
+      .duration-btn {
         background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-        padding: 0.5rem 0.75rem; color: var(--fg); font-size: 0.8125rem;
-        font-weight: 500; cursor: pointer; transition: all 0.15s ease;
+        height: 36px; padding: 0 10px; cursor: pointer;
+        display: flex; align-items: center; gap: 5px; transition: all 0.2s ease;
+        color: var(--subtle); white-space: nowrap;
       }
-      .select-input:hover { border-color: var(--border-hover); background: var(--input-hover-bg); }
-      .select-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+      .duration-btn:hover { border-color: var(--border-hover); background: var(--input-hover-bg); color: var(--fg); }
+      .duration-btn .dur-chevron { transition: transform 0.2s ease; flex-shrink: 0; }
+      .duration-btn.open .dur-chevron { transform: rotate(180deg); }
+      .duration-label { font-size: 0.8125rem; font-weight: 600; color: var(--fg); }
+
+      .duration-wrapper { position: relative; }
+      .duration-panel {
+        position: absolute; right: 0; top: calc(100% + 6px);
+        background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+        padding: 10px; box-shadow: 0 8px 32px var(--shadow-hover); width: 190px; z-index: 200;
+        opacity: 0; transform: translateY(-6px) scale(0.98); pointer-events: none;
+        transition: opacity 0.18s ease, transform 0.18s ease;
+      }
+      .duration-panel.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: all; }
+
+      .dur-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px; }
+      .dur-chip {
+        background: transparent; border: 1px solid var(--border); border-radius: 6px;
+        padding: 5px 2px; font-size: 0.75rem; font-weight: 600; color: var(--subtle);
+        cursor: pointer; transition: all 0.15s; text-align: center; font-family: 'Inter', sans-serif;
+      }
+      .dur-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+      .dur-chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+      .dur-divider {
+        font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+        color: var(--muted); margin: 4px 0 8px; padding-top: 8px; border-top: 1px solid var(--border);
+      }
+      .dur-custom { display: flex; align-items: center; gap: 5px; }
+      .dur-custom-label { font-size: 0.8125rem; color: var(--subtle); flex-shrink: 0; }
+      .dur-num {
+        width: 50px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+        padding: 4px 6px; color: var(--fg); font-size: 0.8125rem; font-weight: 500;
+        font-family: 'Inter', sans-serif; text-align: center; transition: border-color 0.15s;
+      }
+      .dur-num:focus { outline: none; border-color: var(--accent); }
+      .dur-unit {
+        flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+        padding: 4px 5px; color: var(--fg); font-size: 0.8125rem; font-weight: 500;
+        font-family: 'Inter', sans-serif; cursor: pointer; transition: border-color 0.15s;
+      }
+      .dur-unit:focus { outline: none; border-color: var(--accent); }
+      .dur-apply {
+        width: 100%; margin-top: 8px; padding: 6px; border-radius: 7px;
+        background: var(--accent); color: #fff; border: none; font-size: 0.8125rem; font-weight: 600;
+        cursor: pointer; transition: opacity 0.15s; font-family: 'Inter', sans-serif;
+      }
+      .dur-apply:hover { opacity: 0.85; }
 
       .theme-toggle {
         background: var(--card); border: 1px solid var(--border); border-radius: 8px;
@@ -421,11 +468,32 @@
           </div>
         </div>
         <div class="flex gap-2 items-center">
-          <select class="select-input" id="timeRange">
-            <option>Last 15 min</option>
-            <option>Last 1 hour</option>
-            <option>Last 24 hours</option>
-          </select>
+          <div class="duration-wrapper" id="durationWrapper">
+            <button class="duration-btn" id="durationBtn" title="Time range">
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span class="duration-label" id="durationLabel">1h</span>
+              <svg class="dur-chevron" xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="duration-panel" id="durationPanel">
+              <div class="dur-presets">
+                <button class="dur-chip" data-minutes="15" data-label="15m">15m</button>
+                <button class="dur-chip active" data-minutes="60" data-label="1h">1h</button>
+                <button class="dur-chip" data-minutes="360" data-label="6h">6h</button>
+                <button class="dur-chip" data-minutes="1440" data-label="24h">24h</button>
+              </div>
+              <div class="dur-divider">Custom</div>
+              <div class="dur-custom">
+                <span class="dur-custom-label">Last</span>
+                <input class="dur-num" type="number" id="durNum" min="1" max="9999" value="1">
+                <select class="dur-unit" id="durUnit">
+                  <option value="1">min</option>
+                  <option value="60" selected>hr</option>
+                  <option value="1440">day</option>
+                </select>
+              </div>
+              <button class="dur-apply" id="durApply">Apply</button>
+            </div>
+          </div>
           <button class="theme-toggle icon-btn" id="themeToggle" title="Toggle dark mode">
             <svg id="iconMoon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
@@ -524,43 +592,43 @@
       </div>
 
       <!-- Main grid -->
-      <div class="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 min-h-0 pb-4 lg:pb-0">
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 pb-4 lg:pb-0">
 
         <!-- Left column: metrics + charts -->
-        <div class="flex flex-col gap-4 min-h-0">
+        <div class="flex flex-col gap-4">
 
           <!-- Summary metric cards -->
           <div id="summaryCards" class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-4 gap-3 flex-shrink-0"></div>
 
           <!-- Charts 2x2 -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 min-h-0">
-            <div class="card chart-box flex flex-col">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="card chart-box">
               <div class="chart-header">
                 <h3><span class="chart-dot" style="background:var(--accent)"></span> Latency</h3>
                 <span class="text-xs font-medium" style="color:var(--muted)" id="latencyAvgLabel">—</span>
               </div>
-              <div id="latencyChart" class="flex-1"></div>
+              <div id="latencyChart"></div>
             </div>
-            <div class="card chart-box flex flex-col">
+            <div class="card chart-box">
               <div class="chart-header">
                 <h3><span class="chart-dot" style="background:var(--green)"></span> Throughput</h3>
                 <span class="text-xs font-medium" style="color:var(--muted)" id="speedAvgLabel">—</span>
               </div>
-              <div id="speedChart" class="flex-1"></div>
+              <div id="speedChart"></div>
             </div>
-            <div class="card chart-box flex flex-col">
+            <div class="card chart-box">
               <div class="chart-header">
                 <h3><span class="chart-dot" style="background:var(--red)"></span> Packet Loss &amp; Jitter</h3>
                 <span class="text-xs font-medium" style="color:var(--muted)" id="lossAvgLabel">—</span>
               </div>
-              <div id="lossChart" class="flex-1"></div>
+              <div id="lossChart"></div>
             </div>
-            <div class="card chart-box flex flex-col">
+            <div class="card chart-box">
               <div class="chart-header">
                 <h3><span class="chart-dot" style="background:var(--purple)"></span> DNS Resolution</h3>
                 <span class="text-xs font-medium" style="color:var(--muted)" id="dnsAvgLabel">—</span>
               </div>
-              <div id="dnsChart" class="flex-1"></div>
+              <div id="dnsChart"></div>
             </div>
           </div>
         </div>
@@ -682,6 +750,7 @@
       let chartInstances = {};
       let lastUpdateTime = null;
       let isLoading = false;
+      let currentMinutes = 60;
 
       // ── Live "Xs ago" ticker ──────────────────────────────────────────────
       setInterval(() => {
@@ -712,7 +781,7 @@
         if (lu) { lu.classList.add("refreshing"); lu.textContent = "Refreshing…"; }
 
         const [data, cfg] = await Promise.all([
-          fetch("/api/data").then(r => r.json()).catch(() => null),
+          fetch(`/api/data?minutes=${currentMinutes}`).then(r => r.json()).catch(() => null),
           fetch("/api/config").then(r => r.json()).catch(() => null),
         ]);
 
@@ -932,6 +1001,52 @@
         $("#qs-max-lat").textContent  = (s.latency_max || Math.max(...history.map(h => h.latency))) + " ms";
         $("#qs-jitter").textContent   = s.jitter_avg + " ms";
       }
+
+      // ── Duration picker ───────────────────────────────────────────────────
+      const durationBtn   = $("#durationBtn");
+      const durationPanel = $("#durationPanel");
+      const durationLabel = $("#durationLabel");
+
+      function setDuration(minutes, label, reload = true) {
+        currentMinutes = minutes;
+        durationLabel.textContent = label;
+        document.querySelectorAll(".dur-chip").forEach(c => {
+          c.classList.toggle("active", parseInt(c.dataset.minutes) === minutes);
+        });
+        closeDurationPanel();
+        if (reload) loadData(true);
+      }
+
+      function closeDurationPanel() {
+        durationPanel.classList.remove("open");
+        durationBtn.classList.remove("open");
+      }
+
+      durationBtn.addEventListener("click", e => {
+        e.stopPropagation();
+        const isOpen = durationPanel.classList.toggle("open");
+        durationBtn.classList.toggle("open", isOpen);
+      });
+
+      document.querySelectorAll(".dur-chip").forEach(chip => {
+        chip.addEventListener("click", () => {
+          setDuration(parseInt(chip.dataset.minutes), chip.dataset.label);
+        });
+      });
+
+      $("#durApply").addEventListener("click", () => {
+        const n    = Math.max(1, parseInt($("#durNum").value) || 1);
+        const unit = parseInt($("#durUnit").value);
+        const mins = n * unit;
+        const unitLabel = unit === 1 ? "m" : unit === 60 ? "h" : "d";
+        setDuration(mins, n + unitLabel);
+      });
+
+      $("#durNum").addEventListener("keydown", e => { if (e.key === "Enter") $("#durApply").click(); });
+
+      document.addEventListener("click", e => {
+        if (!$("#durationWrapper").contains(e.target)) closeDurationPanel();
+      });
 
       // ── Theme toggle ──────────────────────────────────────────────────────
       const toggle = $("#themeToggle");

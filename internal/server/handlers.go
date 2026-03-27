@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v5"
@@ -28,6 +29,13 @@ type DashboardData struct {
 }
 
 func (h *Handler) GetData(c *echo.Context) error {
+	minutes := 60
+	if m := c.QueryParam("minutes"); m != "" {
+		if n, err := strconv.Atoi(m); err == nil && n > 0 && n <= 43200 {
+			minutes = n
+		}
+	}
+
 	summary, err := h.store.GetSummary()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
@@ -40,7 +48,7 @@ func (h *Handler) GetData(c *echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
-	history, err := h.store.GetHistory(30)
+	history, err := h.store.GetHistoryWindow(minutes)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
 	}
