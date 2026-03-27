@@ -4,7 +4,7 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 
 [![Latest Release](https://img.shields.io/github/v/release/decoded-cipher/netmon)](https://github.com/decoded-cipher/netmon/releases/latest)
 [![Go Report Card](https://goreportcard.com/badge/github.com/decoded-cipher/netmon)](https://goreportcard.com/report/github.com/decoded-cipher/netmon)
-[![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](go.mod)
+[![No CGO](https://img.shields.io/badge/CGO-disabled-brightgreen)](go.mod)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
 
@@ -20,7 +20,7 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 - **Network change detection** — automatically detects Wi-Fi/network switches and tags measurements per network; works on macOS, Linux, Windows, Docker, and Raspberry Pi
 - **Settings UI** — configure ping targets, DNS targets, and intervals directly from the dashboard; changes persist across restarts
 - **`config.json`** — file-based defaults loaded at startup; overridden by any settings saved via the UI
-- **Zero external dependencies** — stdlib HTTP server, pure-Go SQLite driver; no CGO, no C compiler required
+- **No CGO** — pure-Go SQLite driver, stdlib HTTP server; no C compiler required to build or run
 - **Lightweight** — pings every 60s, speed test every 30min (1 MB); negligible network overhead
 - **SQLite storage** — no database server; data persists in a single file
 - **Cross-platform** — runs on Linux (x86, ARM/Pi), macOS, Windows, and Docker
