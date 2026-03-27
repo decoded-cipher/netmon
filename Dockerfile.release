@@ -1,0 +1,7 @@
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates
+WORKDIR /data
+COPY netmon /usr/local/bin/netmon
+EXPOSE 8080
+VOLUME ["/data"]
+CMD ["netmon"]

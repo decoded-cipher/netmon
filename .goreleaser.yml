@@ -36,6 +36,7 @@ checksum:
 dockers:
   - image_templates:
       - ghcr.io/decoded-cipher/netmon:{{ .Tag }}-amd64
+    dockerfile: Dockerfile.release
     use: buildx
     build_flag_templates:
       - --platform=linux/amd64
@@ -45,6 +46,7 @@ dockers:
 
   - image_templates:
       - ghcr.io/decoded-cipher/netmon:{{ .Tag }}-arm64
+    dockerfile: Dockerfile.release
     use: buildx
     build_flag_templates:
       - --platform=linux/arm64
