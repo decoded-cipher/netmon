@@ -4,6 +4,7 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 
 [![Latest Release](https://img.shields.io/github/v/release/decoded-cipher/netmon)](https://github.com/decoded-cipher/netmon/releases/latest)
 [![Go Report Card](https://goreportcard.com/badge/github.com/decoded-cipher/netmon)](https://goreportcard.com/report/github.com/decoded-cipher/netmon)
+[![Zero Dependencies](https://img.shields.io/badge/dependencies-zero-brightgreen)](go.mod)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
 
