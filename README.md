@@ -2,7 +2,8 @@
 
 A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter, packet loss, DNS resolution times, and bandwidth — displayed in a live web UI with no external services required.
 
-![Build](https://github.com/decoded-cipher/netmon/actions/workflows/publish.yml/badge.svg)
+[![Latest Release](https://img.shields.io/github/v/release/decoded-cipher/netmon)](https://github.com/decoded-cipher/netmon/releases/latest)
+[![Go Report Card](https://goreportcard.com/badge/github.com/decoded-cipher/netmon)](https://goreportcard.com/report/github.com/decoded-cipher/netmon)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
 
