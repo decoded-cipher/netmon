@@ -1,11 +1,10 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
-
-	"github.com/labstack/echo/v5"
 
 	"netmon/internal/monitor"
 	"netmon/internal/store"
@@ -20,6 +19,12 @@ func NewHandler(s *store.Store, mon *monitor.Monitor) *Handler {
 	return &Handler{store: s, mon: mon}
 }
 
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(v)
+}
+
 type DashboardData struct {
 	Summary   store.Summary       `json:"summary"`
 	Targets   []store.PingTarget  `json:"targets"`
@@ -28,9 +33,9 @@ type DashboardData struct {
 	NetworkID string              `json:"network_id"`
 }
 
-func (h *Handler) GetData(c *echo.Context) error {
+func (h *Handler) GetData(w http.ResponseWriter, r *http.Request) {
 	minutes := 60
-	if m := c.QueryParam("minutes"); m != "" {
+	if m := r.URL.Query().Get("minutes"); m != "" {
 		if n, err := strconv.Atoi(m); err == nil && n > 0 && n <= 43200 {
 			minutes = n
 		}
@@ -38,21 +43,25 @@ func (h *Handler) GetData(c *echo.Context) error {
 
 	summary, err := h.store.GetSummary()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
 	}
 	targets, err := h.store.GetPingTargets()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
 	}
 	dns, err := h.store.GetDNSChecks()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
 	}
 	history, err := h.store.GetHistoryWindow(minutes)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
 	}
-	return c.JSON(http.StatusOK, DashboardData{
+	writeJSON(w, http.StatusOK, DashboardData{
 		Summary:   summary,
 		Targets:   targets,
 		DNS:       dns,
@@ -70,9 +79,9 @@ type ConfigPayload struct {
 	PingCount      int      `json:"ping_count"`
 }
 
-func (h *Handler) GetConfig(c *echo.Context) error {
+func (h *Handler) GetConfig(w http.ResponseWriter, r *http.Request) {
 	cfg := h.mon.GetConfig()
-	return c.JSON(http.StatusOK, ConfigPayload{
+	writeJSON(w, http.StatusOK, ConfigPayload{
 		PingTargets:    cfg.PingTargets,
 		DNSTargets:     cfg.DNSTargets,
 		PingIntervalS:  int(cfg.PingInterval.Seconds()),
@@ -81,22 +90,27 @@ func (h *Handler) GetConfig(c *echo.Context) error {
 	})
 }
 
-func (h *Handler) SaveConfig(c *echo.Context) error {
+func (h *Handler) SaveConfig(w http.ResponseWriter, r *http.Request) {
 	var p ConfigPayload
-	if err := c.Bind(&p); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
 	}
 	if len(p.PingTargets) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "ping_targets cannot be empty"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ping_targets cannot be empty"})
+		return
 	}
 	if p.PingIntervalS < 10 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "ping_interval_s must be >= 10"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ping_interval_s must be >= 10"})
+		return
 	}
 	if p.SpeedIntervalM < 5 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "speed_interval_m must be >= 5"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "speed_interval_m must be >= 5"})
+		return
 	}
 	if p.PingCount < 1 || p.PingCount > 20 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "ping_count must be between 1 and 20"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ping_count must be between 1 and 20"})
+		return
 	}
 
 	if err := h.store.SaveConfig(store.ConfigSettings{
@@ -106,7 +120,8 @@ func (h *Handler) SaveConfig(c *echo.Context) error {
 		SpeedIntervalM: p.SpeedIntervalM,
 		PingCount:      p.PingCount,
 	}); err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
 	}
 
 	def := monitor.DefaultConfig()
@@ -120,5 +135,5 @@ func (h *Handler) SaveConfig(c *echo.Context) error {
 		UploadURL:     def.UploadURL,
 	})
 
-	return c.JSON(http.StatusOK, map[string]string{"status": "saved"})
+	writeJSON(w, http.StatusOK, map[string]string{"status": "saved"})
 }

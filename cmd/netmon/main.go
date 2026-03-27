@@ -6,9 +6,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/labstack/echo/v5"
-	"github.com/labstack/echo/v5/middleware"
-
 	"netmon/internal/monitor"
 	"netmon/internal/server"
 	"netmon/internal/store"
@@ -44,37 +41,42 @@ func main() {
 	mon := monitor.New(cfg, s, log)
 	mon.Start(ctx)
 
-	e := echo.New()
-	e.Use(middleware.Recover())
-
 	h := server.NewHandler(s, mon)
-	e.GET("/api/data", h.GetData)
-	e.GET("/api/config", h.GetConfig)
-	e.POST("/api/config", h.SaveConfig)
-	e.GET("/", func(c *echo.Context) error {
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/data", h.GetData)
+	mux.HandleFunc("GET /api/config", h.GetConfig)
+	mux.HandleFunc("POST /api/config", h.SaveConfig)
+	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		data, err := web.FS.ReadFile("index.html")
 		if err != nil {
-			return err
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-		return c.HTMLBlob(http.StatusOK, data)
+		w.Header().Set("Content-Type", "text/html")
+		w.Write(data)
 	})
-	e.GET("/style.css", func(c *echo.Context) error {
+	mux.HandleFunc("GET /style.css", func(w http.ResponseWriter, r *http.Request) {
 		data, err := web.FS.ReadFile("style.css")
 		if err != nil {
-			return err
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-		return c.Blob(http.StatusOK, "text/css", data)
+		w.Header().Set("Content-Type", "text/css")
+		w.Write(data)
 	})
-	e.GET("/script.js", func(c *echo.Context) error {
+	mux.HandleFunc("GET /script.js", func(w http.ResponseWriter, r *http.Request) {
 		data, err := web.FS.ReadFile("script.js")
 		if err != nil {
-			return err
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-		return c.Blob(http.StatusOK, "application/javascript", data)
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Write(data)
 	})
 
 	log.Info("starting server", "addr", ":8080")
-	if err := e.Start(":8080"); err != nil {
+	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Error("server stopped", "error", err)
 	}
 

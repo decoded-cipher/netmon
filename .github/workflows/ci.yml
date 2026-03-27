@@ -16,14 +16,11 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Install C compiler (required for CGO/sqlite3)
-        run: sudo apt-get install -y gcc
-
       - name: Vet
         run: go vet ./...
 
       - name: Build
-        run: CGO_ENABLED=1 go build -o netmon ./cmd/netmon
+        run: CGO_ENABLED=0 go build -o netmon ./cmd/netmon
 
   publish:
     name: Publish Docker image to GHCR
