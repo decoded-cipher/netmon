@@ -6,7 +6,6 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
 
----
 
 ## Features
 
@@ -17,7 +16,6 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 - **SQLite storage** — no database server; data persists in a single file
 - **Cross-platform** — runs on Linux (x86, ARM/Pi), macOS, Windows, and Docker
 
----
 
 ## Quick Start
 
@@ -29,6 +27,9 @@ docker run -d \
   --network host \
   -v netmon-data:/data \
   ghcr.io/decoded-cipher/netmon:latest
+
+# create the volume first if it doesn't exist
+docker volume create netmon-data
 ```
 
 Or with Docker Compose:
@@ -61,7 +62,6 @@ make docker     # build Docker image
 make docker-run # build + run Docker container
 ```
 
----
 
 ## Configuration
 
@@ -76,7 +76,6 @@ All defaults live in `internal/monitor/monitor.go → DefaultConfig()`. There is
 | Speed test size | `1 MB` | Payload size (kept small to avoid hogging the link) |
 | HTTP port | `:8080` | Dashboard address |
 
----
 
 ## Architecture
 
@@ -96,7 +95,6 @@ web/
 2. `speedWorker` downloads/uploads 1 MB to Cloudflare every 30 min — updates latest bandwidth values
 3. Dashboard polls `GET /api/data` every 30s and renders charts client-side
 
----
 
 ## Platforms
 
@@ -115,7 +113,6 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc \
   go build -o netmon ./cmd/netmon
 ```
 
----
 
 ## Requirements
 
@@ -123,15 +120,3 @@ GOOS=linux GOARCH=arm64 CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc \
 - **CGO enabled** (`CGO_ENABLED=1`) — required by the SQLite driver (`go-sqlite3`)
 - A C compiler (`gcc` / `musl-gcc` / `clang`) at build time; not needed at runtime
 - `ping` available in `PATH` at runtime (standard on all platforms)
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
-
-## License
-
-[MIT](LICENSE)
