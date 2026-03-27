@@ -2,7 +2,7 @@
 
 A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter, packet loss, DNS resolution times, and bandwidth — displayed in a live web UI with no external services required.
 
-![Build](https://github.com/decoded-cipher/netmon/actions/workflows/ci.yml/badge.svg)
+![Build](https://github.com/decoded-cipher/netmon/actions/workflows/publish.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
 
@@ -25,6 +25,17 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 
 
 ## Quick Start
+
+### Download a release
+
+Pre-built binaries for Linux, macOS, and Windows (amd64 + arm64) are available on the [Releases](https://github.com/decoded-cipher/netmon/releases) page.
+
+```bash
+# example: Linux amd64
+curl -LO https://github.com/decoded-cipher/netmon/releases/latest/download/netmon_linux_amd64.tar.gz
+tar -xzf netmon_linux_amd64.tar.gz
+./netmon
+```
 
 ### Docker (recommended)
 

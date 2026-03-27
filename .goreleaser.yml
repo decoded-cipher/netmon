@@ -1,0 +1,74 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: netmon
+    main: ./cmd/netmon
+    binary: netmon
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - id: netmon
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+dockers:
+  - image_templates:
+      - ghcr.io/decoded-cipher/netmon:{{ .Tag }}-amd64
+    use: buildx
+    build_flag_templates:
+      - --platform=linux/amd64
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    goarch: amd64
+
+  - image_templates:
+      - ghcr.io/decoded-cipher/netmon:{{ .Tag }}-arm64
+    use: buildx
+    build_flag_templates:
+      - --platform=linux/arm64
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+    goarch: arm64
+
+docker_manifests:
+  - name_template: ghcr.io/decoded-cipher/netmon:{{ .Tag }}
+    image_templates:
+      - ghcr.io/decoded-cipher/netmon:{{ .Tag }}-amd64
+      - ghcr.io/decoded-cipher/netmon:{{ .Tag }}-arm64
+
+  - name_template: ghcr.io/decoded-cipher/netmon:latest
+    image_templates:
+      - ghcr.io/decoded-cipher/netmon:{{ .Tag }}-amd64
+      - ghcr.io/decoded-cipher/netmon:{{ .Tag }}-arm64
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
+      - "^ci:"
+      - Merge pull request
+      - Merge branch
