@@ -35,42 +35,62 @@ func NewStore(path string) (*Store, error) {
 func (s *Store) migrate() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS measurements (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			ts TEXT NOT NULL,
-			latency REAL NOT NULL DEFAULT 0,
-			jitter REAL NOT NULL DEFAULT 0,
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			ts         TEXT NOT NULL,
+			network_id TEXT NOT NULL DEFAULT '',
+			latency    REAL NOT NULL DEFAULT 0,
+			jitter     REAL NOT NULL DEFAULT 0,
 			packet_loss REAL NOT NULL DEFAULT 0,
-			download REAL NOT NULL DEFAULT 0,
-			upload REAL NOT NULL DEFAULT 0,
-			dns REAL NOT NULL DEFAULT 0
+			download   REAL NOT NULL DEFAULT 0,
+			upload     REAL NOT NULL DEFAULT 0,
+			dns        REAL NOT NULL DEFAULT 0
 		);
 
 		CREATE TABLE IF NOT EXISTS ping_targets (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			host TEXT NOT NULL UNIQUE,
-			ip TEXT NOT NULL DEFAULT '',
-			latency REAL NOT NULL DEFAULT 0,
-			loss REAL NOT NULL DEFAULT 0,
-			status TEXT NOT NULL DEFAULT 'unknown',
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			host       TEXT NOT NULL UNIQUE,
+			ip         TEXT NOT NULL DEFAULT '',
+			latency    REAL NOT NULL DEFAULT 0,
+			loss       REAL NOT NULL DEFAULT 0,
+			status     TEXT NOT NULL DEFAULT 'unknown',
 			updated_at TEXT NOT NULL
 		);
 
 		CREATE TABLE IF NOT EXISTS dns_checks (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			host TEXT NOT NULL UNIQUE,
-			time_ms REAL NOT NULL DEFAULT 0,
-			resolver TEXT NOT NULL DEFAULT 'system',
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			host       TEXT NOT NULL UNIQUE,
+			time_ms    REAL NOT NULL DEFAULT 0,
+			resolver   TEXT NOT NULL DEFAULT 'system',
 			updated_at TEXT NOT NULL
 		);
 
+		CREATE TABLE IF NOT EXISTS network_events (
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			ts         TEXT NOT NULL,
+			network_id TEXT NOT NULL DEFAULT '',
+			ssid       TEXT NOT NULL DEFAULT '',
+			gateway    TEXT NOT NULL DEFAULT ''
+		);
+
 		CREATE INDEX IF NOT EXISTS idx_measurements_ts ON measurements(ts);
+		CREATE INDEX IF NOT EXISTS idx_network_events_ts ON network_events(ts);
 	`)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Add network_id to existing measurements rows (no-op if column already exists).
+	s.db.Exec(`ALTER TABLE measurements ADD COLUMN network_id TEXT NOT NULL DEFAULT ''`)
+
+	return nil
 }
+
+// --- Measurement ---
 
 type Measurement struct {
 	ID         int64   `json:"id"`
 	Time       string  `json:"time"`
+	NetworkID  string  `json:"network_id"`
 	Latency    float64 `json:"latency"`
 	Jitter     float64 `json:"jitter"`
 	PacketLoss float64 `json:"loss"`
@@ -81,16 +101,16 @@ type Measurement struct {
 
 func (s *Store) SaveMeasurement(m Measurement) error {
 	_, err := s.db.Exec(
-		`INSERT INTO measurements (ts, latency, jitter, packet_loss, download, upload, dns)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		m.Time, m.Latency, m.Jitter, m.PacketLoss, m.Download, m.Upload, m.DNS,
+		`INSERT INTO measurements (ts, network_id, latency, jitter, packet_loss, download, upload, dns)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		m.Time, m.NetworkID, m.Latency, m.Jitter, m.PacketLoss, m.Download, m.Upload, m.DNS,
 	)
 	return err
 }
 
 func (s *Store) GetHistory(limit int) ([]Measurement, error) {
 	rows, err := s.db.Query(
-		`SELECT id, ts, latency, jitter, packet_loss, download, upload, dns
+		`SELECT id, ts, network_id, latency, jitter, packet_loss, download, upload, dns
 		 FROM measurements ORDER BY ts DESC LIMIT ?`, limit,
 	)
 	if err != nil {
@@ -102,7 +122,7 @@ func (s *Store) GetHistory(limit int) ([]Measurement, error) {
 	for rows.Next() {
 		var m Measurement
 		var ts string
-		if err := rows.Scan(&m.ID, &ts, &m.Latency, &m.Jitter, &m.PacketLoss, &m.Download, &m.Upload, &m.DNS); err != nil {
+		if err := rows.Scan(&m.ID, &ts, &m.NetworkID, &m.Latency, &m.Jitter, &m.PacketLoss, &m.Download, &m.Upload, &m.DNS); err != nil {
 			return nil, err
 		}
 		t, _ := time.Parse(time.RFC3339, ts)
@@ -119,6 +139,8 @@ func (s *Store) GetHistory(limit int) ([]Measurement, error) {
 	}
 	return results, nil
 }
+
+// --- Summary ---
 
 type Summary struct {
 	LatencyAvg  float64 `json:"latency_avg"`
@@ -208,6 +230,8 @@ func (s *Store) GetSummary() (Summary, error) {
 	return sum, nil
 }
 
+// --- PingTarget ---
+
 type PingTarget struct {
 	Host    string  `json:"host"`
 	IP      string  `json:"ip"`
@@ -248,6 +272,8 @@ func (s *Store) GetPingTargets() ([]PingTarget, error) {
 	return targets, nil
 }
 
+// --- DNSCheck ---
+
 type DNSCheck struct {
 	Host     string  `json:"host"`
 	TimeMs   float64 `json:"time_ms"`
@@ -282,6 +308,31 @@ func (s *Store) GetDNSChecks() ([]DNSCheck, error) {
 		checks = append(checks, d)
 	}
 	return checks, nil
+}
+
+// --- NetworkEvent ---
+
+type NetworkEvent struct {
+	ID      int64  `json:"id"`
+	Time    string `json:"time"`
+	Network string `json:"network_id"`
+	SSID    string `json:"ssid"`
+	Gateway string `json:"gateway"`
+}
+
+func (s *Store) LogNetworkEvent(e NetworkEvent) error {
+	_, err := s.db.Exec(
+		`INSERT INTO network_events (ts, network_id, ssid, gateway) VALUES (?, ?, ?, ?)`,
+		e.Time, e.Network, e.SSID, e.Gateway,
+	)
+	return err
+}
+
+// GetCurrentNetworkID returns the network_id from the most recent network event.
+func (s *Store) GetCurrentNetworkID() string {
+	var id string
+	s.db.QueryRow(`SELECT network_id FROM network_events ORDER BY ts DESC LIMIT 1`).Scan(&id)
+	return id
 }
 
 func (s *Store) Close() error {

@@ -255,6 +255,7 @@
             <p class="text-xs mt-0.5" style="color: var(--subtle)">
               Monitoring <span id="targetCount" class="font-semibold" style="color: var(--fg)">—</span> targets
               · Updated <span id="lastUpdated" class="font-semibold" style="color: var(--fg)">—</span>
+              · <span id="networkLabel" class="font-semibold" style="color: var(--accent)">—</span>
             </p>
           </div>
         </div>
@@ -429,6 +430,7 @@
         const now = new Date();
         $("#lastUpdated").textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         $("#targetCount").textContent = (data.targets || []).length;
+        $("#networkLabel").textContent = data.network_id || "unknown";
 
         const loss = data.summary.packet_loss;
         const badge = $("#statusBadge");

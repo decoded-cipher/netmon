@@ -15,10 +15,11 @@ func NewHandler(store *Store) *Handler {
 }
 
 type DashboardData struct {
-	Summary Summary       `json:"summary"`
-	Targets []PingTarget  `json:"targets"`
-	DNS     []DNSCheck    `json:"dns"`
-	History []Measurement `json:"history"`
+	Summary   Summary      `json:"summary"`
+	Targets   []PingTarget `json:"targets"`
+	DNS       []DNSCheck   `json:"dns"`
+	History   []Measurement `json:"history"`
+	NetworkID string        `json:"network_id"`
 }
 
 func (h *Handler) GetData(c *echo.Context) error {
@@ -43,9 +44,10 @@ func (h *Handler) GetData(c *echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, DashboardData{
-		Summary: summary,
-		Targets: targets,
-		DNS:     dns,
-		History: history,
+		Summary:   summary,
+		Targets:   targets,
+		DNS:       dns,
+		History:   history,
+		NetworkID: h.store.GetCurrentNetworkID(),
 	})
 }
