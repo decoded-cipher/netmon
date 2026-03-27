@@ -18,6 +18,7 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 - **Network change detection** — automatically detects Wi-Fi/network switches and tags measurements per network; works on macOS, Linux, Windows, Docker, and Raspberry Pi
 - **Settings UI** — configure ping targets, DNS targets, and intervals directly from the dashboard; changes persist across restarts
 - **`config.json`** — file-based defaults loaded at startup; overridden by any settings saved via the UI
+- **Zero external dependencies** — stdlib HTTP server, pure-Go SQLite driver; no CGO, no C compiler required
 - **Lightweight** — pings every 60s, speed test every 30min (1 MB); negligible network overhead
 - **SQLite storage** — no database server; data persists in a single file
 - **Cross-platform** — runs on Linux (x86, ARM/Pi), macOS, Windows, and Docker
@@ -48,7 +49,7 @@ Then open **http://localhost:8080**.
 
 ### Build from source
 
-Requires Go 1.21+ and a C compiler (`gcc`) for the SQLite driver.
+Requires Go 1.21+ only — no C compiler needed.
 
 ```bash
 git clone https://github.com/decoded-cipher/netmon.git
@@ -121,14 +122,11 @@ web/
 ### Raspberry Pi
 
 ```bash
-GOOS=linux GOARCH=arm64 CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc \
-  go build -o netmon ./cmd/netmon
+GOOS=linux GOARCH=arm64 go build -o netmon ./cmd/netmon
 ```
 
 
 ## Requirements
 
 - **Go 1.21+** for building from source
-- **CGO enabled** (`CGO_ENABLED=1`) — required by the SQLite driver (`go-sqlite3`)
-- A C compiler (`gcc` / `musl-gcc` / `clang`) at build time; not needed at runtime
 - `ping` available in `PATH` at runtime (standard on all platforms)
