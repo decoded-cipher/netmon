@@ -160,9 +160,12 @@
 
       .duration-btn {
         background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-        height: 36px; padding: 0 10px; cursor: pointer;
-        display: flex; align-items: center; gap: 5px; transition: all 0.2s ease;
+        height: 32px; padding: 0 8px; cursor: pointer;
+        display: flex; align-items: center; gap: 4px; transition: all 0.2s ease;
         color: var(--subtle); white-space: nowrap;
+      }
+      @media (min-width: 640px) {
+        .duration-btn { height: 36px; padding: 0 10px; gap: 5px; }
       }
       .duration-btn:hover { border-color: var(--border-hover); background: var(--input-hover-bg); color: var(--fg); }
       .duration-btn .dur-chevron { transition: transform 0.2s ease; flex-shrink: 0; }
@@ -215,11 +218,14 @@
 
       .theme-toggle {
         background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-        width: 36px; height: 36px; cursor: pointer;
+        width: 32px; height: 32px; cursor: pointer;
         display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
         color: var(--subtle);
       }
       .theme-toggle:hover { border-color: var(--border-hover); background: var(--input-hover-bg); color: var(--fg); }
+      @media (min-width: 640px) {
+        .theme-toggle { width: 36px; height: 36px; }
+      }
 
       .target-table {
         width: 100%; border-collapse: collapse; font-size: 0.75rem;
@@ -284,6 +290,18 @@
         display: flex; align-items: center; gap: 0.375rem;
       }
 
+      @media (min-width: 1024px) {
+        #chartGrid {
+          grid-template-rows: 1fr 1fr;
+        }
+        #chartGrid .card {
+          display: flex; flex-direction: column; min-height: 0;
+        }
+        #chartGrid .card > div[id$="Chart"] {
+          flex: 1; min-height: 0;
+        }
+      }
+
       @media (max-width: 639px) {
         .metric-value { font-size: 1.125rem; }
         .metric-card { padding: 0.75rem 0.875rem; }
@@ -311,9 +329,12 @@
       /* Settings button */
       .settings-btn {
         background: var(--card); border: 1px solid var(--border); border-radius: 8px;
-        width: 36px; height: 36px; cursor: pointer;
+        width: 32px; height: 32px; cursor: pointer;
         display: flex; align-items: center; justify-content: center;
         transition: all 0.2s ease; color: var(--subtle);
+      }
+      @media (min-width: 640px) {
+        .settings-btn { width: 36px; height: 36px; }
       }
       .settings-btn:hover { border-color: var(--border-hover); background: var(--input-hover-bg); color: var(--fg); }
 
@@ -322,10 +343,13 @@
 
       /* App logo */
       .app-logo {
-        width: 38px; height: 38px; border-radius: 10px;
+        width: 32px; height: 32px; border-radius: 8px;
         background: var(--accent-soft); color: var(--accent);
         display: flex; align-items: center; justify-content: center;
         flex-shrink: 0;
+      }
+      @media (min-width: 640px) {
+        .app-logo { width: 38px; height: 38px; border-radius: 10px; }
       }
 
       /* Section label with icon */
@@ -443,31 +467,33 @@
   </head>
 
   <body>
-    <div class="flex flex-col h-screen px-4 sm:px-6 lg:px-8 py-4 max-w-[1680px] mx-auto overflow-y-auto lg:overflow-hidden">
+    <div class="flex flex-col h-screen px-4 sm:px-6 lg:px-8 py-4 max-w-[1680px] mx-auto overflow-hidden">
 
       <!-- Header -->
-      <header class="flex flex-wrap justify-between items-center gap-3 mb-4 flex-shrink-0">
-        <div class="flex items-center gap-3 sm:gap-4">
-          <div class="app-logo">
+      <header class="flex justify-between items-center gap-2 mb-3 flex-shrink-0 min-w-0">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="app-logo flex-shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/></svg>
           </div>
-          <div>
-            <div class="flex items-center gap-2.5">
-              <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight">netmon</h1>
-              <span class="status-badge online" id="statusBadge">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h1 class="text-lg sm:text-2xl font-extrabold tracking-tight leading-none">netmon</h1>
+              <span class="status-badge online flex-shrink-0" id="statusBadge">
                 <span class="status-dot"></span>
                 Online
               </span>
             </div>
-            <p class="text-xs mt-0.5 flex items-center gap-1" style="color: var(--subtle)">
-              <span class="live-dot"></span>
-              Home network · <span id="targetCount" class="font-semibold" style="color: var(--fg)">—</span> probes
-              · <span id="lastUpdated" style="color: var(--muted)">—</span>
-              · <span id="networkLabel" class="font-semibold" style="color: var(--accent)">—</span>
+            <p class="text-xs mt-0.5 flex items-center gap-1 truncate" style="color: var(--subtle)">
+              <span class="live-dot flex-shrink-0"></span>
+              <span id="targetCount" class="font-semibold flex-shrink-0" style="color: var(--fg)">—</span>
+              <span class="flex-shrink-0">probes ·</span>
+              <span id="lastUpdated" class="flex-shrink-0" style="color: var(--muted)">—</span>
+              <span class="hidden sm:inline flex-shrink-0"> · </span>
+              <span id="networkLabel" class="font-semibold hidden sm:inline" style="color: var(--accent)">—</span>
             </p>
           </div>
         </div>
-        <div class="flex gap-2 items-center">
+        <div class="flex gap-1.5 items-center flex-shrink-0">
           <div class="duration-wrapper" id="durationWrapper">
             <button class="duration-btn" id="durationBtn" title="Time range">
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -591,17 +617,20 @@
         </div>
       </div>
 
+      <!-- Scroll wrapper: scrollable on mobile, clipped on desktop -->
+      <div class="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
+
       <!-- Main grid -->
-      <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-4 pb-4 lg:pb-0">
+      <div class="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3 lg:h-full">
 
         <!-- Left column: metrics + charts -->
-        <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-3 lg:min-h-0">
 
           <!-- Summary metric cards -->
-          <div id="summaryCards" class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-4 gap-3 flex-shrink-0"></div>
+          <div id="summaryCards" class="grid grid-cols-2 sm:grid-cols-4 gap-3 flex-shrink-0"></div>
 
           <!-- Charts 2x2 -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div id="chartGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3 lg:flex-1 lg:min-h-0">
             <div class="card chart-box">
               <div class="chart-header">
                 <h3><span class="chart-dot" style="background:var(--accent)"></span> Latency</h3>
@@ -634,7 +663,7 @@
         </div>
 
         <!-- Right sidebar -->
-        <div class="flex flex-col gap-4 min-h-0 lg:overflow-y-auto">
+        <div class="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto pb-4 lg:pb-0">
 
           <!-- Health score card -->
           <div class="card p-4 flex flex-col items-center" id="healthCard">
@@ -743,6 +772,7 @@
 
         </div>
       </div>
+      </div><!-- /scroll wrapper -->
     </div>
 
     <script>
@@ -751,6 +781,17 @@
       let lastUpdateTime = null;
       let isLoading = false;
       let currentMinutes = 60;
+
+      function getChartHeight() {
+        if (window.innerWidth >= 1024) {
+          const grid = document.getElementById('chartGrid');
+          if (grid && grid.offsetHeight > 0) {
+            // 2 rows with 12px gap; each card has ~52px overhead (padding + header)
+            return Math.max(80, Math.floor((grid.offsetHeight - 12) / 2) - 52);
+          }
+        }
+        return window.innerWidth < 640 ? 160 : 185;
+      }
 
       // ── Live "Xs ago" ticker ──────────────────────────────────────────────
       setInterval(() => {
@@ -867,8 +908,7 @@
 
         const times      = history.map(h => h.time);
         const isSmall    = window.innerWidth < 640;
-        const isMd       = window.innerWidth < 1024;
-        const chartH     = isSmall ? 180 : isMd ? 200 : 220;
+        const chartH     = getChartHeight();
         const tickCount  = Math.min(times.length, isSmall ? 4 : 6);
         const dark       = document.body.classList.contains("dark-mode");
         const labelStyle = { colors: "var(--muted)", fontSize: isSmall ? "9px" : "10px" };
@@ -1125,6 +1165,12 @@
       document.addEventListener("DOMContentLoaded", () => {
         loadData();
         setInterval(loadData, 15000); // poll every 15s
+      });
+
+      let resizeTimer;
+      window.addEventListener("resize", () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => loadData(true), 250);
       });
     </script>
   </body>
