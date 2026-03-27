@@ -5,7 +5,6 @@ let isLoading = false;
 let currentMinutes = 60;
 let prevSummary = null;
 let prevStatus  = null;
-let refreshTimerStart = null;
 const REFRESH_MS = 15000;
 
 function getChartHeight() {
@@ -31,14 +30,6 @@ setInterval(() => {
   const el = $("#lastUpdated");
   if (el && !el.classList.contains("refreshing")) el.textContent = label;
 }, 1000);
-
-// ── Refresh bar ticker ────────────────────────────────────────────────
-setInterval(() => {
-  if (!refreshTimerStart) return;
-  const pct = Math.min(100, ((Date.now() - refreshTimerStart) / REFRESH_MS) * 100);
-  const fill = document.getElementById('refreshBarFill');
-  if (fill) fill.style.width = pct + '%';
-}, 100);
 
 // ── SVG icons ─────────────────────────────────────────────────────────
 const SVG = {
@@ -69,7 +60,6 @@ async function loadData(forceRecreate = false) {
   }
 
   lastUpdateTime = Date.now();
-  refreshTimerStart = Date.now();
   checkThresholds(data.summary, prevSummary);
 
   // Filter to current config only — gateway is excluded from the table
@@ -117,12 +107,11 @@ function renderSummary(s, history) {
   const lossColor = s.packet_loss > 1 ? "red" : "green";
   const last = (history || []).slice(-20);
   const sc = { blue: "#3b82f6", green: "#10b981", purple: "#8b5cf6", red: "#ef4444" };
-  const p = prevSummary;
   const items = [
-    { label: "Avg Latency",  value: s.latency_avg + " ms",   icon: SVG.clock,     color: "blue",    sub: "p95 " + s.latency_p95 + " ms",           delta: deltaStr(s.latency_avg,  p ? p.latency_avg  : null, true),  spark: sparklineSVG(last.map(h => h.latency),  sc.blue)   },
-    { label: "Download",     value: s.download_avg + " Mbps", icon: SVG.arrowDown, color: "green",   sub: "avg throughput",                          delta: deltaStr(s.download_avg, p ? p.download_avg : null, false), spark: sparklineSVG(last.map(h => h.download), sc.green)  },
-    { label: "Upload",       value: s.upload_avg + " Mbps",   icon: SVG.arrowUp,   color: "purple",  sub: "avg throughput",                          delta: deltaStr(s.upload_avg,   p ? p.upload_avg   : null, false), spark: sparklineSVG(last.map(h => h.upload),   sc.purple) },
-    { label: "Packet Loss",  value: s.packet_loss + "%",      icon: SVG.activity,  color: lossColor, sub: s.packet_loss < 1 ? "healthy" : "elevated", delta: deltaStr(s.packet_loss,  p ? p.packet_loss  : null, true),  spark: sparklineSVG(last.map(h => h.loss),     sc[lossColor]) },
+    { label: "Avg Latency",  value: s.latency_avg + " ms",   icon: SVG.clock,     color: "blue",    sub: "p95 " + s.latency_p95 + " ms",  spark: sparklineSVG(last.map(h => h.latency),  sc.blue)   },
+    { label: "Download",     value: s.download_avg + " Mbps", icon: SVG.arrowDown, color: "green",   sub: "avg throughput", spark: sparklineSVG(last.map(h => h.download), sc.green)  },
+    { label: "Upload",       value: s.upload_avg + " Mbps",   icon: SVG.arrowUp,   color: "purple",  sub: "avg throughput", spark: sparklineSVG(last.map(h => h.upload),   sc.purple) },
+    { label: "Packet Loss",  value: s.packet_loss + "%",      icon: SVG.activity,  color: lossColor, sub: s.packet_loss < 1 ? "healthy" : "elevated",  spark: sparklineSVG(last.map(h => h.loss),     sc[lossColor]) },
   ];
   $("#summaryCards").innerHTML = items.map(m =>
     `<div class="card metric-card" data-color="${m.color}">
@@ -130,7 +119,7 @@ function renderSummary(s, history) {
         <div class="metric-label">${m.label}</div>
         <div class="metric-icon ${m.color}">${m.icon}</div>
       </div>
-      <div class="metric-value">${m.value}${m.delta}</div>
+      <div class="metric-value">${m.value}</div>
       <div class="metric-sub">${m.sub}</div>
       ${m.spark}
     </div>`
@@ -161,21 +150,11 @@ function renderCharts(history, summary, forceRecreate = false) {
 
   // Smooth update when charts already exist (no flicker)
   if (!forceRecreate && chartInstances.latency) {
-    const xUpd = { xaxis: { categories: times, tickAmount: tickCount, labels: { style: labelStyle } } };
-    chartInstances.latency.updateOptions(xUpd, false, true);
-    chartInstances.latency.updateSeries([{ name: "Latency (ms)", data: history.map(h => h.latency) }], true);
-    chartInstances.speed.updateOptions(xUpd, false, true);
-    chartInstances.speed.updateSeries([
-      { name: "Download", data: history.map(h => h.download) },
-      { name: "Upload",   data: history.map(h => h.upload) },
-    ], true);
-    chartInstances.loss.updateOptions(xUpd, false, true);
-    chartInstances.loss.updateSeries([
-      { name: "Loss (%)",   data: history.map(h => h.loss) },
-      { name: "Jitter (ms)", data: history.map(h => h.jitter) },
-    ], true);
-    chartInstances.dns.updateOptions(xUpd, false, true);
-    chartInstances.dns.updateSeries([{ name: "DNS (ms)", data: history.map(h => h.dns) }], true);
+    const xAxis = { categories: times, tickAmount: tickCount, labels: { style: labelStyle } };
+    chartInstances.latency.updateOptions({ xaxis: xAxis, series: [{ name: "Latency (ms)", data: history.map(h => h.latency) }] }, false, true);
+    chartInstances.speed.updateOptions({ xaxis: xAxis, series: [{ name: "Download", data: history.map(h => h.download) }, { name: "Upload", data: history.map(h => h.upload) }] }, false, true);
+    chartInstances.loss.updateOptions({ xaxis: xAxis, series: [{ name: "Loss (%)", data: history.map(h => h.loss) }, { name: "Jitter (ms)", data: history.map(h => h.jitter) }] }, false, true);
+    chartInstances.dns.updateOptions({ xaxis: xAxis, series: [{ name: "DNS (ms)", data: history.map(h => h.dns) }] }, false, true);
     return;
   }
 
@@ -300,18 +279,6 @@ function sparklineSVG(values, color) {
     + '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/></svg>';
 }
 
-// ── Delta indicator helper ─────────────────────────────────────────────
-function deltaStr(curr, prev, lowerIsBetter) {
-  if (prev == null) return '';
-  const diff = curr - prev;
-  if (Math.abs(diff) < 0.05) return '';
-  const better = lowerIsBetter ? diff < 0 : diff > 0;
-  const color  = better ? 'var(--green)' : 'var(--red)';
-  const arrow  = diff > 0 ? '↑' : '↓';
-  const abs    = Math.abs(diff);
-  const disp   = abs < 10 ? abs.toFixed(1) : Math.round(abs);
-  return '<span class="metric-delta" style="color:' + color + '">' + arrow + disp + '</span>';
-}
 
 // ── Toast notifications ────────────────────────────────────────────────
 const activeToasts = new Set();
