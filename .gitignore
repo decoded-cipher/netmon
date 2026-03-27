@@ -1,8 +1,8 @@
 # Binaries
-netmon
-netmon.exe
-cmd/netmon/netmon
-cmd/netmon/netmon.exe
+/netmon
+/netmon.exe
+/cmd/netmon/netmon
+/cmd/netmon/netmon.exe
 
 # Build output
 *.exe
