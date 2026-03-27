@@ -1,0 +1,16 @@
+services:
+  netmon:
+    build: .
+    image: netmon
+    container_name: netmon
+    ports:
+      - "8080:8080"
+    volumes:
+      - netmon-data:/data
+    restart: unless-stopped
+    # host network gives the monitor access to the local gateway for accurate latency
+    # Remove if not needed or on Windows (host networking not supported there)
+    network_mode: host
+
+volumes:
+  netmon-data:
