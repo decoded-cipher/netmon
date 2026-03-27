@@ -1,6 +1,8 @@
 services:
   netmon:
-    build: .
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
     image: netmon
     container_name: netmon
     ports:

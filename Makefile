@@ -17,7 +17,7 @@ vet:
 	go vet ./...
 
 docker:
-	docker build -t $(IMAGE) .
+	docker build -f infra/Dockerfile -t $(IMAGE) .
 
 docker-run: docker
 	docker run --rm -p 8080:8080 --network host -v netmon-data:/data $(IMAGE)

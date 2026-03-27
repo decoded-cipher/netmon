@@ -53,7 +53,7 @@ docker volume create netmon-data
 Or with Docker Compose:
 
 ```bash
-docker compose up -d
+docker compose -f infra/docker-compose.yml up -d
 ```
 
 Then open **http://localhost:8080**.
@@ -128,7 +128,7 @@ web/
 | Linux x86-64 | Yes | Includes Docker |
 | Linux ARM (Raspberry Pi) | Yes | Build with `GOARCH=arm64` |
 | Windows | Partial | Ping parsing works; SSID detection via `netsh` |
-| Docker | Yes | See `Dockerfile` and `docker-compose.yml` |
+| Docker | Yes | See `infra/Dockerfile` and `infra/docker-compose.yml` |
 
 ### Raspberry Pi
 
