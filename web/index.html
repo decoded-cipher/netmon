@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Network Monitor</title>
+    <title>netmon · Home Network Monitor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -176,26 +176,38 @@
 
       .target-table {
         width: 100%; border-collapse: collapse; font-size: 0.8125rem;
+        table-layout: fixed;
       }
+      .target-table col.col-host    { width: auto; }
+      .target-table col.col-latency { width: 72px; }
+      .target-table col.col-loss    { width: 52px; }
       .target-table th {
         text-align: left; font-size: 0.6875rem; font-weight: 600;
         text-transform: uppercase; letter-spacing: 0.05em;
-        color: var(--muted); padding: 0.5rem 0.75rem;
+        color: var(--muted); padding: 0.5rem 0.625rem;
         border-bottom: 1px solid var(--border);
+        white-space: nowrap; overflow: hidden;
       }
+      .target-table th:not(:first-child) { text-align: right; }
       .target-table td {
-        padding: 0.625rem 0.75rem;
+        padding: 0.5rem 0.625rem;
         border-bottom: 1px solid var(--border);
-        color: var(--fg);
+        color: var(--fg); overflow: hidden;
       }
+      .target-table td:not(:first-child) { text-align: right; white-space: nowrap; }
       .target-table tr:last-child td { border-bottom: none; }
       .target-table tr:nth-child(even) td { background: var(--table-stripe); }
       .target-table .host-cell {
         font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
+        overflow: hidden;
+      }
+      .target-table .host-cell span:last-child {
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       }
       .target-table .ip-cell {
         font-family: 'SF Mono', 'Fira Code', monospace;
-        font-size: 0.75rem; color: var(--muted);
+        font-size: 0.6875rem; color: var(--muted);
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
       }
       .inline-dot {
         width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
@@ -238,6 +250,24 @@
         .chart-box { padding: 0.75rem 0.75rem 0.25rem; }
       }
 
+      /* Flash animation when new data arrives */
+      @keyframes flash-update {
+        0%   { box-shadow: 0 0 0 0 var(--accent-soft), 0 1px 3px var(--shadow); }
+        25%  { box-shadow: 0 0 0 4px var(--accent-soft), 0 1px 3px var(--shadow); }
+        100% { box-shadow: 0 1px 3px var(--shadow); }
+      }
+      .flash-update { animation: flash-update 0.7s ease-out; }
+
+      /* Live indicator dot */
+      .live-dot {
+        display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--green); margin-right: 4px;
+        animation: pulse-dot 2s infinite;
+      }
+
+      /* Loading shimmer on lastUpdated text */
+      .refreshing { color: var(--muted); font-style: italic; }
+
       /* Settings button */
       .settings-btn {
         background: var(--card); border: 1px solid var(--border); border-radius: 8px;
@@ -263,76 +293,110 @@
         display: flex; align-items: center; gap: 0.375rem;
       }
 
-      /* Modal backdrop */
+      /* Modal */
       .modal-backdrop {
         position: fixed; inset: 0; z-index: 50;
-        background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+        background: rgba(0,0,0,0.5); backdrop-filter: blur(6px);
         display: flex; align-items: center; justify-content: center;
         padding: 1rem;
         opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
       }
       .modal-backdrop.open { opacity: 1; pointer-events: all; }
-
-      /* Modal card */
       .modal {
-        background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-        box-shadow: 0 24px 64px rgba(0,0,0,0.2);
-        width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
-        transform: translateY(12px); transition: transform 0.2s ease;
+        background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+        box-shadow: 0 32px 80px rgba(0,0,0,0.25);
+        width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto;
+        transform: translateY(16px) scale(0.98); transition: transform 0.25s ease;
       }
-      .modal-backdrop.open .modal { transform: translateY(0); }
+      .modal-backdrop.open .modal { transform: translateY(0) scale(1); }
 
       .modal-header {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+        padding: 1.375rem 1.625rem;
       }
-      .modal-header h2 { font-size: 1rem; font-weight: 700; }
+      .modal-header h2 { font-size: 1.0625rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
       .modal-close {
-        background: none; border: none; cursor: pointer; color: var(--muted);
-        font-size: 1.25rem; line-height: 1; padding: 0.25rem;
-        border-radius: 6px; transition: color 0.15s;
+        background: var(--bg); border: 1px solid var(--border); cursor: pointer;
+        color: var(--muted); width: 30px; height: 30px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.15s;
       }
-      .modal-close:hover { color: var(--fg); }
+      .modal-close:hover { color: var(--fg); border-color: var(--border-hover); }
 
-      .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+      .modal-body { padding: 0 1.625rem 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+      .modal-section-title {
+        font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.07em; color: var(--muted);
+        display: flex; align-items: center; gap: 0.375rem;
+        padding-bottom: 0.75rem; border-bottom: 1px solid var(--border);
+        margin-bottom: 0.875rem;
+      }
+
+      .targets-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.875rem; }
+      @media (max-width: 480px) { .targets-grid { grid-template-columns: 1fr; } }
 
       .field-group { display: flex; flex-direction: column; gap: 0.375rem; }
       .field-label {
-        font-size: 0.75rem; font-weight: 600; color: var(--subtle);
+        font-size: 0.6875rem; font-weight: 700; color: var(--subtle);
         text-transform: uppercase; letter-spacing: 0.05em;
       }
-      .field-hint { font-size: 0.7rem; color: var(--muted); margin-top: 0.25rem; }
+      .field-hint { font-size: 0.6875rem; color: var(--muted); margin-top: 0.25rem; line-height: 1.4; }
       .field-input {
-        background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-        padding: 0.5rem 0.75rem; color: var(--fg); font-size: 0.875rem;
+        background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+        padding: 0.5rem 0.75rem; color: var(--fg); font-size: 0.8125rem;
         width: 100%; transition: border-color 0.15s, box-shadow 0.15s;
-        font-family: inherit;
+        font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.6;
       }
       .field-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
-      textarea.field-input { resize: vertical; min-height: 72px; }
+      textarea.field-input { resize: none; }
 
-      .field-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+      /* Interval cards */
+      .intervals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+      .interval-card {
+        background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+        padding: 0.875rem 1rem; display: flex; flex-direction: column; gap: 0.5rem;
+        transition: border-color 0.15s;
+        cursor: text;
+      }
+      .interval-card:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+      .interval-card-label { font-size: 0.6875rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+      .interval-input-row { display: flex; align-items: baseline; gap: 0.25rem; }
+      .interval-input {
+        background: transparent; border: none; outline: none;
+        font-size: 1.625rem; font-weight: 800; color: var(--fg);
+        width: 100%; min-width: 0; letter-spacing: -0.02em;
+        font-family: 'Inter', sans-serif;
+        -moz-appearance: textfield;
+      }
+      .interval-input::-webkit-outer-spin-button,
+      .interval-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+      .interval-unit { font-size: 0.75rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
 
+      /* Footer */
       .modal-footer {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 1rem 1.5rem; border-top: 1px solid var(--border); gap: 0.75rem;
+        padding: 1rem 1.625rem; border-top: 1px solid var(--border); gap: 1rem;
+        flex-wrap: wrap;
       }
-      .modal-note { font-size: 0.7rem; color: var(--muted); }
-      .modal-actions { display: flex; gap: 0.5rem; }
+      .modal-note {
+        font-size: 0.7rem; color: var(--muted);
+        display: flex; align-items: center; gap: 0.35rem;
+      }
+      .modal-actions { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; }
 
       .btn {
-        padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.8125rem;
+        padding: 0.5rem 1.125rem; border-radius: 9px; font-size: 0.8125rem;
         font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+        white-space: nowrap;
       }
-      .btn-ghost {
-        background: transparent; border: 1px solid var(--border); color: var(--subtle);
-      }
-      .btn-ghost:hover { border-color: var(--border-hover); color: var(--fg); }
+      .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--subtle); }
+      .btn-ghost:hover { border-color: var(--border-hover); color: var(--fg); background: var(--bg); }
       .btn-primary { background: var(--accent); color: #fff; }
       .btn-primary:hover { opacity: 0.88; }
-      .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+      .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
-      .save-status { font-size: 0.75rem; font-weight: 500; }
+      .save-status { font-size: 0.75rem; font-weight: 600; }
       .save-status.ok { color: var(--green); }
       .save-status.err { color: var(--red); }
     </style>
@@ -349,15 +413,16 @@
           </div>
           <div>
             <div class="flex items-center gap-2.5">
-              <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight">Network Monitor</h1>
+              <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight">netmon</h1>
               <span class="status-badge online" id="statusBadge">
                 <span class="status-dot"></span>
                 Online
               </span>
             </div>
-            <p class="text-xs mt-0.5" style="color: var(--subtle)">
-              Monitoring <span id="targetCount" class="font-semibold" style="color: var(--fg)">—</span> targets
-              · Updated <span id="lastUpdated" class="font-semibold" style="color: var(--fg)">—</span>
+            <p class="text-xs mt-0.5 flex items-center gap-1" style="color: var(--subtle)">
+              <span class="live-dot"></span>
+              Home network · <span id="targetCount" class="font-semibold" style="color: var(--fg)">—</span> probes
+              · <span id="lastUpdated" style="color: var(--muted)">—</span>
               · <span id="networkLabel" class="font-semibold" style="color: var(--accent)">—</span>
             </p>
           </div>
@@ -381,52 +446,87 @@
       <!-- Settings Modal -->
       <div class="modal-backdrop" id="modalBackdrop">
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+
           <div class="modal-header">
-            <h2 id="modalTitle" style="display:flex;align-items:center;gap:0.5rem">
+            <h2 id="modalTitle">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
               Monitor Settings
             </h2>
             <button class="modal-close" id="modalClose" title="Close">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
+
           <div class="modal-body">
-            <div class="field-group">
-              <label class="field-label" for="cfgPingTargets">Ping Targets</label>
-              <textarea class="field-input" id="cfgPingTargets" rows="3" placeholder="One host per line, e.g. google.com"></textarea>
-              <div class="field-hint">One hostname or IP per line. Gateway is added automatically.</div>
-            </div>
-            <div class="field-group">
-              <label class="field-label" for="cfgDnsTargets">DNS Targets</label>
-              <textarea class="field-input" id="cfgDnsTargets" rows="2" placeholder="One host per line, e.g. cloudflare.com"></textarea>
-              <div class="field-hint">Hosts used to measure DNS resolution time.</div>
-            </div>
-            <div class="field-row">
-              <div class="field-group">
-                <label class="field-label" for="cfgPingInterval">Ping Interval (s)</label>
-                <input class="field-input" type="number" id="cfgPingInterval" min="10" max="3600" placeholder="60" />
-                <div class="field-hint">Min 10 s</div>
+
+            <!-- Targets section -->
+            <div>
+              <div class="modal-section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                Internet Probes
               </div>
-              <div class="field-group">
-                <label class="field-label" for="cfgSpeedInterval">Speed Interval (min)</label>
-                <input class="field-input" type="number" id="cfgSpeedInterval" min="5" max="1440" placeholder="30" />
-                <div class="field-hint">Min 5 min</div>
-              </div>
-              <div class="field-group">
-                <label class="field-label" for="cfgPingCount">Ping Count</label>
-                <input class="field-input" type="number" id="cfgPingCount" min="1" max="20" placeholder="5" />
-                <div class="field-hint">1–20 per cycle</div>
+              <div class="targets-grid">
+                <div class="field-group">
+                  <label class="field-label" for="cfgPingTargets">Probe Hosts</label>
+                  <textarea class="field-input" id="cfgPingTargets" rows="4" placeholder="google.com&#10;cloudflare.com" spellcheck="false"></textarea>
+                  <div class="field-hint">Pinged to test your internet connection. Your gateway is always added.</div>
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="cfgDnsTargets">DNS Probe Hosts</label>
+                  <textarea class="field-input" id="cfgDnsTargets" rows="4" placeholder="google.com&#10;cloudflare.com" spellcheck="false"></textarea>
+                  <div class="field-hint">Resolved to measure DNS lookup speed on your network.</div>
+                </div>
               </div>
             </div>
+
+            <!-- Intervals section -->
+            <div>
+              <div class="modal-section-title">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Intervals &amp; Probing
+              </div>
+              <div class="intervals-grid">
+                <div class="interval-card" onclick="document.getElementById('cfgPingInterval').focus()">
+                  <div class="interval-card-label">Ping every</div>
+                  <div class="interval-input-row">
+                    <input class="interval-input" type="number" id="cfgPingInterval" min="10" max="3600" placeholder="60" />
+                    <span class="interval-unit">sec</span>
+                  </div>
+                  <div class="field-hint" style="margin-top:0">Min 10 s</div>
+                </div>
+                <div class="interval-card" onclick="document.getElementById('cfgSpeedInterval').focus()">
+                  <div class="interval-card-label">Speed test every</div>
+                  <div class="interval-input-row">
+                    <input class="interval-input" type="number" id="cfgSpeedInterval" min="5" max="1440" placeholder="30" />
+                    <span class="interval-unit">min</span>
+                  </div>
+                  <div class="field-hint" style="margin-top:0">Min 5 min</div>
+                </div>
+                <div class="interval-card" onclick="document.getElementById('cfgPingCount').focus()">
+                  <div class="interval-card-label">Pings per cycle</div>
+                  <div class="interval-input-row">
+                    <input class="interval-input" type="number" id="cfgPingCount" min="1" max="20" placeholder="5" />
+                    <span class="interval-unit">pings</span>
+                  </div>
+                  <div class="field-hint" style="margin-top:0">1 – 20</div>
+                </div>
+              </div>
+            </div>
+
           </div>
+
           <div class="modal-footer">
-            <span class="modal-note">Interval changes take effect after restart.</span>
+            <div class="modal-note">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Interval changes take effect after restart
+            </div>
             <div class="modal-actions">
               <span class="save-status" id="saveStatus"></span>
               <button class="btn btn-ghost" id="modalCancel">Cancel</button>
-              <button class="btn btn-primary" id="saveBtn">Save</button>
+              <button class="btn btn-primary" id="saveBtn">Save changes</button>
             </div>
           </div>
+
         </div>
       </div>
 
@@ -512,10 +612,15 @@
           <div class="card p-4 flex-1 min-h-0 flex flex-col">
             <div class="section-label">
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-              Ping Targets
+              Connectivity
             </div>
             <div class="overflow-y-auto flex-1">
               <table class="target-table" id="targetTable">
+                <colgroup>
+                  <col class="col-host" />
+                  <col class="col-latency" />
+                  <col class="col-loss" />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Host</th>
@@ -535,6 +640,10 @@
               DNS Lookups
             </div>
             <table class="target-table" id="dnsTable">
+              <colgroup>
+                <col class="col-host" />
+                <col class="col-latency" />
+              </colgroup>
               <thead>
                 <tr>
                   <th>Host</th>
@@ -586,27 +695,73 @@
     <script>
       const $ = (s) => document.querySelector(s);
       let chartInstances = {};
+      let lastUpdateTime = null;
+      let isLoading = false;
 
-      async function loadData() {
+      // ── Live "Xs ago" ticker ──────────────────────────────────────────────
+      setInterval(() => {
+        if (!lastUpdateTime) return;
+        const sec = Math.floor((Date.now() - lastUpdateTime) / 1000);
+        let label;
+        if (sec < 5)        label = "just now";
+        else if (sec < 60)  label = sec + "s ago";
+        else if (sec < 3600) label = Math.floor(sec / 60) + "m ago";
+        else                label = Math.floor(sec / 3600) + "h ago";
+        const el = $("#lastUpdated");
+        if (el && !el.classList.contains("refreshing")) el.textContent = label;
+      }, 1000);
+
+      // ── SVG icons ─────────────────────────────────────────────────────────
+      const SVG = {
+        clock:     `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+        arrowDown: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`,
+        arrowUp:   `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`,
+        activity:  `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+      };
+
+      // ── Data loading ──────────────────────────────────────────────────────
+      async function loadData(forceRecreate = false) {
+        if (isLoading) return;
+        isLoading = true;
+        const lu = $("#lastUpdated");
+        if (lu) { lu.classList.add("refreshing"); lu.textContent = "Refreshing…"; }
+
         const [data, cfg] = await Promise.all([
           fetch("/api/data").then(r => r.json()).catch(() => null),
           fetch("/api/config").then(r => r.json()).catch(() => null),
         ]);
-        if (!data) return;
+
+        isLoading = false;
+        if (lu) lu.classList.remove("refreshing");
+
+        if (!data) {
+          if (lu) lu.textContent = "Error";
+          return;
+        }
+
+        lastUpdateTime = Date.now();
+
+        // Filter to current config only
+        if (cfg) {
+          const allowedPing = new Set([...cfg.ping_targets.map(h => h.toLowerCase()), "gateway"]);
+          data.targets = (data.targets || []).filter(t => allowedPing.has(t.host.toLowerCase()));
+          const allowedDns = new Set(cfg.dns_targets.map(h => h.toLowerCase()));
+          data.dns = (data.dns || []).filter(d => allowedDns.has(d.host.toLowerCase()));
+        }
+
         renderHeader(data, cfg);
         renderSummary(data.summary);
-        renderCharts(data.history, data.summary);
+        renderCharts(data.history, data.summary, forceRecreate);
         renderHealth(data.summary);
         renderTargets(data.targets);
         renderDNS(data.dns);
         renderQuickStats(data.summary, data.history);
       }
 
+      // ── Header ────────────────────────────────────────────────────────────
       function renderHeader(data, cfg) {
-        const now = new Date();
-        $("#lastUpdated").textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const targetCount = cfg ? cfg.ping_targets.length : (data.targets || []).length;
-        const intervalLabel = cfg ? ` · Ping every ${cfg.ping_interval_s}s` : "";
+        const intervalLabel = cfg ? ` · ping ${cfg.ping_interval_s}s` : "";
         $("#targetCount").textContent = targetCount;
         $("#networkLabel").textContent = (data.network_id || "unknown") + intervalLabel;
 
@@ -624,20 +779,14 @@
         }
       }
 
-      const SVG = {
-        clock: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
-        arrowDown: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`,
-        arrowUp: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`,
-        activity: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
-      };
-
+      // ── Summary cards ─────────────────────────────────────────────────────
       function renderSummary(s) {
         const lossColor = s.packet_loss > 1 ? "red" : "green";
         const items = [
-          { label: "Avg Latency", value: s.latency_avg + " ms", icon: SVG.clock, color: "blue", sub: "p95 " + s.latency_p95 + " ms" },
-          { label: "Download", value: s.download_avg + " Mbps", icon: SVG.arrowDown, color: "green", sub: "avg throughput" },
-          { label: "Upload", value: s.upload_avg + " Mbps", icon: SVG.arrowUp, color: "purple", sub: "avg throughput" },
-          { label: "Packet Loss", value: s.packet_loss + "%", icon: SVG.activity, color: lossColor, sub: s.packet_loss < 1 ? "healthy" : "elevated" },
+          { label: "Avg Latency",  value: s.latency_avg + " ms",   icon: SVG.clock,     color: "blue",   sub: "p95 " + s.latency_p95 + " ms" },
+          { label: "Download",     value: s.download_avg + " Mbps", icon: SVG.arrowDown, color: "green",  sub: "avg throughput" },
+          { label: "Upload",       value: s.upload_avg + " Mbps",   icon: SVG.arrowUp,   color: "purple", sub: "avg throughput" },
+          { label: "Packet Loss",  value: s.packet_loss + "%",      icon: SVG.activity,  color: lossColor, sub: s.packet_loss < 1 ? "healthy" : "elevated" },
         ];
         $("#summaryCards").innerHTML = items.map(m =>
           `<div class="card metric-card" data-color="${m.color}">
@@ -649,147 +798,126 @@
             <div class="metric-sub">${m.sub}</div>
           </div>`
         ).join("");
+        // Flash each card to signal new data
+        document.querySelectorAll("#summaryCards .card").forEach(c => {
+          c.classList.remove("flash-update");
+          void c.offsetWidth;
+          c.classList.add("flash-update");
+        });
       }
 
-      function renderCharts(history, summary) {
+      // ── Charts ────────────────────────────────────────────────────────────
+      function renderCharts(history, summary, forceRecreate = false) {
+        if (!history || history.length === 0) return;
+
+        const times      = history.map(h => h.time);
+        const isSmall    = window.innerWidth < 640;
+        const isMd       = window.innerWidth < 1024;
+        const chartH     = isSmall ? 180 : isMd ? 200 : 220;
+        const tickCount  = Math.min(times.length, isSmall ? 4 : 6);
+        const dark       = document.body.classList.contains("dark-mode");
+        const labelStyle = { colors: "var(--muted)", fontSize: isSmall ? "9px" : "10px" };
+
+        $("#latencyAvgLabel").textContent = "avg " + summary.latency_avg + " ms";
+        $("#speedAvgLabel").textContent   = "↓" + summary.download_avg + "  ↑" + summary.upload_avg + " Mbps";
+        $("#lossAvgLabel").textContent    = "loss " + summary.packet_loss + "% · jitter " + summary.jitter_avg + " ms";
+        $("#dnsAvgLabel").textContent     = "avg " + summary.dns_avg + " ms";
+
+        // Smooth update when charts already exist (no flicker)
+        if (!forceRecreate && chartInstances.latency) {
+          const xUpd = { xaxis: { categories: times, tickAmount: tickCount, labels: { style: labelStyle } } };
+          chartInstances.latency.updateOptions(xUpd, false, true);
+          chartInstances.latency.updateSeries([{ name: "Latency (ms)", data: history.map(h => h.latency) }], true);
+          chartInstances.speed.updateOptions(xUpd, false, true);
+          chartInstances.speed.updateSeries([
+            { name: "Download", data: history.map(h => h.download) },
+            { name: "Upload",   data: history.map(h => h.upload) },
+          ], true);
+          chartInstances.loss.updateOptions(xUpd, false, true);
+          chartInstances.loss.updateSeries([
+            { name: "Loss (%)",   data: history.map(h => h.loss) },
+            { name: "Jitter (ms)", data: history.map(h => h.jitter) },
+          ], true);
+          chartInstances.dns.updateOptions(xUpd, false, true);
+          chartInstances.dns.updateSeries([{ name: "DNS (ms)", data: history.map(h => h.dns) }], true);
+          return;
+        }
+
+        // Full create (first load or after theme change)
         Object.values(chartInstances).forEach(c => c.destroy());
         chartInstances = {};
 
-        if (!history || history.length === 0) return;
-
-        const times = history.map(h => h.time);
-        const isSmall = window.innerWidth < 640;
-        const isMd = window.innerWidth < 1024;
-        const h = isSmall ? 180 : isMd ? 200 : 220;
-
-        const tooltipTheme = document.body.classList.contains("dark-mode") ? "dark" : "light";
-        const labelStyle = { colors: "var(--muted)", fontSize: isSmall ? "9px" : "10px" };
-        const tickCount = Math.min(times.length, isSmall ? 4 : 6);
-
         const base = {
-          chart: { type: "area", background: "transparent", fontFamily: "'Inter',sans-serif", toolbar: { show: false }, height: h, animations: { speed: 400 }, zoom: { enabled: false } },
+          chart: { type: "area", background: "transparent", fontFamily: "'Inter',sans-serif", toolbar: { show: false }, height: chartH, animations: { speed: 500 }, zoom: { enabled: false } },
           stroke: { curve: "smooth", width: 2 },
           markers: { size: times.length <= 5 ? 4 : 0, hover: { size: 5 } },
           grid: { borderColor: "var(--border)", xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: -8, right: 8, bottom: 0, left: 8 } },
           xaxis: {
-            categories: times,
-            tickAmount: tickCount,
+            categories: times, tickAmount: tickCount,
             labels: { style: labelStyle, rotate: 0, hideOverlappingLabels: true, maxHeight: 30 },
             axisBorder: { show: false }, axisTicks: { show: false },
           },
           yaxis: { labels: { style: labelStyle }, forceNiceScale: true },
           legend: { position: "top", fontSize: "10px", labels: { colors: "var(--subtle)" }, markers: { width: 6, height: 6, radius: 2 }, itemMargin: { horizontal: 8 } },
-          tooltip: { theme: tooltipTheme, style: { fontSize: "11px" }, x: { show: true } },
+          tooltip: { theme: dark ? "dark" : "light", style: { fontSize: "11px" }, x: { show: true } },
           dataLabels: { enabled: false },
         };
+        const fillArea = (o = 0.12) => ({ type: "gradient", gradient: { shadeIntensity: 0, opacityFrom: o, opacityTo: 0.01, stops: [0, 95] } });
 
-        const fillArea = (opacity = 0.12) => ({ type: "gradient", gradient: { shadeIntensity: 0, opacityFrom: opacity, opacityTo: 0.01, stops: [0, 95] } });
-
-        $("#latencyAvgLabel").textContent = "avg " + summary.latency_avg + " ms";
-        chartInstances.latency = new ApexCharts($("#latencyChart"), {
-          ...base,
-          series: [{ name: "Latency (ms)", data: history.map(h => h.latency) }],
-          colors: ["#3b82f6"],
-          fill: fillArea(),
-          yaxis: { ...base.yaxis, min: 0 },
-        });
+        chartInstances.latency = new ApexCharts($("#latencyChart"), { ...base, series: [{ name: "Latency (ms)", data: history.map(h => h.latency) }], colors: ["#3b82f6"], fill: fillArea(), yaxis: { ...base.yaxis, min: 0 } });
         chartInstances.latency.render();
 
-        $("#speedAvgLabel").textContent = "↓" + summary.download_avg + "  ↑" + summary.upload_avg + " Mbps";
-        chartInstances.speed = new ApexCharts($("#speedChart"), {
-          ...base,
-          series: [
-            { name: "Download", data: history.map(h => h.download) },
-            { name: "Upload", data: history.map(h => h.upload) },
-          ],
-          colors: ["#10b981", "#8b5cf6"],
-          fill: fillArea(0.08),
-        });
+        chartInstances.speed = new ApexCharts($("#speedChart"), { ...base, series: [{ name: "Download", data: history.map(h => h.download) }, { name: "Upload", data: history.map(h => h.upload) }], colors: ["#10b981", "#8b5cf6"], fill: fillArea(0.08) });
         chartInstances.speed.render();
 
-        $("#lossAvgLabel").textContent = "loss " + summary.packet_loss + "% · jitter " + summary.jitter_avg + " ms";
         chartInstances.loss = new ApexCharts($("#lossChart"), {
           ...base,
-          series: [
-            { name: "Loss (%)", data: history.map(h => h.loss) },
-            { name: "Jitter (ms)", data: history.map(h => h.jitter) },
-          ],
-          colors: ["#ef4444", "#f59e0b"],
-          fill: fillArea(0.1),
+          series: [{ name: "Loss (%)", data: history.map(h => h.loss) }, { name: "Jitter (ms)", data: history.map(h => h.jitter) }],
+          colors: ["#ef4444", "#f59e0b"], fill: fillArea(0.1),
           yaxis: [
-            { forceNiceScale: true, min: 0, title: { text: "Loss %", style: { fontSize: "10px", color: "var(--muted)" } }, labels: { style: { colors: "var(--muted)", fontSize: "10px" } } },
+            { forceNiceScale: true, min: 0, title: { text: "Loss %",   style: { fontSize: "10px", color: "var(--muted)" } }, labels: { style: { colors: "var(--muted)", fontSize: "10px" } } },
             { opposite: true, forceNiceScale: true, min: 0, title: { text: "Jitter ms", style: { fontSize: "10px", color: "var(--muted)" } }, labels: { style: { colors: "var(--muted)", fontSize: "10px" } } },
           ],
         });
         chartInstances.loss.render();
 
-        $("#dnsAvgLabel").textContent = "avg " + summary.dns_avg + " ms";
-        chartInstances.dns = new ApexCharts($("#dnsChart"), {
-          ...base,
-          series: [{ name: "DNS (ms)", data: history.map(h => h.dns) }],
-          colors: ["#8b5cf6"],
-          fill: fillArea(),
-          yaxis: { ...base.yaxis, min: 0 },
-        });
+        chartInstances.dns = new ApexCharts($("#dnsChart"), { ...base, series: [{ name: "DNS (ms)", data: history.map(h => h.dns) }], colors: ["#8b5cf6"], fill: fillArea(), yaxis: { ...base.yaxis, min: 0 } });
         chartInstances.dns.render();
       }
 
+      // ── Health ring ───────────────────────────────────────────────────────
       function renderHealth(s) {
         let score = 100;
-        if (s.latency_avg > 50) score -= 20;
-        else if (s.latency_avg > 30) score -= 10;
-        else if (s.latency_avg > 20) score -= 5;
-
-        if (s.packet_loss > 5) score -= 30;
-        else if (s.packet_loss > 1) score -= 15;
-        else if (s.packet_loss > 0.5) score -= 5;
-
-        if (s.download_avg < 25) score -= 20;
-        else if (s.download_avg < 50) score -= 10;
-
-        if (s.jitter_avg > 10) score -= 10;
-        else if (s.jitter_avg > 5) score -= 5;
-
+        if (s.latency_avg > 50) score -= 20; else if (s.latency_avg > 30) score -= 10; else if (s.latency_avg > 20) score -= 5;
+        if (s.packet_loss > 5) score -= 30; else if (s.packet_loss > 1) score -= 15; else if (s.packet_loss > 0.5) score -= 5;
+        if (s.download_avg < 25) score -= 20; else if (s.download_avg < 50) score -= 10;
+        if (s.jitter_avg > 10) score -= 10; else if (s.jitter_avg > 5) score -= 5;
         score = Math.max(0, Math.min(100, score));
 
         const circ = 2 * Math.PI * 42;
-        const offset = circ - (score / 100) * circ;
-        const arc = $("#healthArc");
+        const arc  = $("#healthArc");
         const color = score >= 80 ? "var(--green)" : score >= 50 ? "var(--yellow)" : "var(--red)";
         arc.style.stroke = color;
-        requestAnimationFrame(() => { arc.style.strokeDashoffset = offset; });
-
+        requestAnimationFrame(() => { arc.style.strokeDashoffset = circ - (score / 100) * circ; });
         $("#healthNum").textContent = score;
         $("#healthNum").style.color = color;
 
-        const rateLabel = (val, good, warn) => {
-          if (val <= good) return { text: "Good", color: "var(--green)" };
-          if (val <= warn) return { text: "Fair", color: "var(--yellow)" };
-          return { text: "Poor", color: "var(--red)" };
-        };
-
-        const lat = rateLabel(s.latency_avg, 20, 50);
-        $("#hbLatency").textContent = lat.text;
-        $("#hbLatency").style.color = lat.color;
-
-        const loss = rateLabel(s.packet_loss, 0.5, 2);
-        $("#hbLoss").textContent = loss.text;
-        $("#hbLoss").style.color = loss.color;
-
+        const rate = (val, good, warn) => val <= good ? { text: "Good", color: "var(--green)" } : val <= warn ? { text: "Fair", color: "var(--yellow)" } : { text: "Poor", color: "var(--red)" };
+        const lat = rate(s.latency_avg, 20, 50);
+        $("#hbLatency").textContent = lat.text; $("#hbLatency").style.color = lat.color;
+        const loss = rate(s.packet_loss, 0.5, 2);
+        $("#hbLoss").textContent = loss.text; $("#hbLoss").style.color = loss.color;
         const spd = s.download_avg >= 50 ? { text: "Good", color: "var(--green)" } : s.download_avg >= 25 ? { text: "Fair", color: "var(--yellow)" } : { text: "Poor", color: "var(--red)" };
-        $("#hbSpeed").textContent = spd.text;
-        $("#hbSpeed").style.color = spd.color;
+        $("#hbSpeed").textContent = spd.text; $("#hbSpeed").style.color = spd.color;
       }
 
+      // ── Tables ────────────────────────────────────────────────────────────
       function renderTargets(targets) {
         if (!targets) return;
         $("#targetBody").innerHTML = targets.map(t =>
           `<tr>
             <td>
-              <div class="host-cell">
-                <span class="inline-dot ${t.status === 'up' ? 'up' : 'down'}"></span>
-                <span>${t.host}</span>
-              </div>
+              <div class="host-cell"><span class="inline-dot ${t.status === 'up' ? 'up' : 'down'}"></span><span>${t.host}</span></div>
               <div class="ip-cell">${t.ip}</div>
             </td>
             <td class="font-semibold">${t.latency} ms</td>
@@ -809,70 +937,60 @@
       }
 
       function renderQuickStats(s, history) {
+        if (!history || history.length === 0) return;
         const peakDl = Math.max(...history.map(h => h.download));
-        $("#qs-uptime").textContent = s.uptime_24h + "%";
-        $("#qs-outages").textContent = s.outages_24h;
-        $("#qs-peak-dl").textContent = peakDl + " Mbps";
-        $("#qs-min-lat").textContent = (s.latency_min || Math.min(...history.map(h => h.latency))) + " ms";
-        $("#qs-max-lat").textContent = (s.latency_max || Math.max(...history.map(h => h.latency))) + " ms";
-        $("#qs-jitter").textContent = s.jitter_avg + " ms";
+        $("#qs-uptime").textContent   = s.uptime_24h + "%";
+        $("#qs-outages").textContent  = s.outages_24h;
+        $("#qs-peak-dl").textContent  = peakDl + " Mbps";
+        $("#qs-min-lat").textContent  = (s.latency_min || Math.min(...history.map(h => h.latency))) + " ms";
+        $("#qs-max-lat").textContent  = (s.latency_max || Math.max(...history.map(h => h.latency))) + " ms";
+        $("#qs-jitter").textContent   = s.jitter_avg + " ms";
       }
 
-      // Theme toggle
+      // ── Theme toggle ──────────────────────────────────────────────────────
       const toggle = $("#themeToggle");
       function applyTheme(dark) {
         document.body.classList.toggle("dark-mode", dark);
         $("#iconMoon").style.display = dark ? "none" : "";
-        $("#iconSun").style.display = dark ? "" : "none";
+        $("#iconSun").style.display  = dark ? "" : "none";
       }
       applyTheme(localStorage.getItem("theme") === "dark");
       toggle.addEventListener("click", () => {
         const dark = document.body.classList.toggle("dark-mode");
         applyTheme(dark);
         localStorage.setItem("theme", dark ? "dark" : "light");
-        // re-render charts so tooltip theme updates
-        loadData();
+        loadData(true); // recreate charts so tooltip theme updates
       });
 
-      // Settings modal
+      // ── Settings modal ────────────────────────────────────────────────────
       const backdrop = $("#modalBackdrop");
 
-      function openSettings() {
-        backdrop.classList.add("open");
-        loadConfig();
-      }
-
-      function closeSettings() {
-        backdrop.classList.remove("open");
-        $("#saveStatus").textContent = "";
-      }
+      function openSettings() { backdrop.classList.add("open"); loadConfig(); }
+      function closeSettings() { backdrop.classList.remove("open"); $("#saveStatus").textContent = ""; }
 
       async function loadConfig() {
         try {
           const cfg = await fetch("/api/config").then(r => r.json());
-          $("#cfgPingTargets").value = (cfg.ping_targets || []).join("\n");
-          $("#cfgDnsTargets").value = (cfg.dns_targets || []).join("\n");
-          $("#cfgPingInterval").value = cfg.ping_interval_s || 60;
+          $("#cfgPingTargets").value  = (cfg.ping_targets || []).join("\n");
+          $("#cfgDnsTargets").value   = (cfg.dns_targets  || []).join("\n");
+          $("#cfgPingInterval").value = cfg.ping_interval_s  || 60;
           $("#cfgSpeedInterval").value = cfg.speed_interval_m || 30;
-          $("#cfgPingCount").value = cfg.ping_count || 5;
-        } catch (e) {
-          showStatus("Failed to load config", false);
-        }
+          $("#cfgPingCount").value    = cfg.ping_count || 5;
+        } catch { showStatus("Failed to load config", false); }
       }
 
       async function saveConfig() {
         const saveBtn = $("#saveBtn");
         saveBtn.disabled = true;
-
-        const pingTargets = $("#cfgPingTargets").value.split("\n").map(s => s.trim()).filter(Boolean);
-        const dnsTargets = $("#cfgDnsTargets").value.split("\n").map(s => s.trim()).filter(Boolean);
-        const pingIntervalS = parseInt($("#cfgPingInterval").value, 10);
+        const pingTargets  = $("#cfgPingTargets").value.split("\n").map(s => s.trim()).filter(Boolean);
+        const dnsTargets   = $("#cfgDnsTargets").value.split("\n").map(s => s.trim()).filter(Boolean);
+        const pingIntervalS  = parseInt($("#cfgPingInterval").value, 10);
         const speedIntervalM = parseInt($("#cfgSpeedInterval").value, 10);
-        const pingCount = parseInt($("#cfgPingCount").value, 10);
+        const pingCount    = parseInt($("#cfgPingCount").value, 10);
 
-        if (pingTargets.length === 0) { showStatus("Ping targets cannot be empty", false); saveBtn.disabled = false; return; }
-        if (pingIntervalS < 10) { showStatus("Ping interval must be ≥ 10 s", false); saveBtn.disabled = false; return; }
-        if (speedIntervalM < 5) { showStatus("Speed interval must be ≥ 5 min", false); saveBtn.disabled = false; return; }
+        if (!pingTargets.length)           { showStatus("Probe hosts cannot be empty", false); saveBtn.disabled = false; return; }
+        if (pingIntervalS < 10)            { showStatus("Ping interval must be ≥ 10 s", false); saveBtn.disabled = false; return; }
+        if (speedIntervalM < 5)            { showStatus("Speed interval must be ≥ 5 min", false); saveBtn.disabled = false; return; }
         if (pingCount < 1 || pingCount > 20) { showStatus("Ping count must be 1–20", false); saveBtn.disabled = false; return; }
 
         try {
@@ -882,15 +1000,9 @@
             body: JSON.stringify({ ping_targets: pingTargets, dns_targets: dnsTargets, ping_interval_s: pingIntervalS, speed_interval_m: speedIntervalM, ping_count: pingCount }),
           });
           const body = await res.json();
-          if (res.ok) {
-            showStatus("Saved!", true);
-            setTimeout(closeSettings, 900);
-          } else {
-            showStatus(body.error || "Save failed", false);
-          }
-        } catch (e) {
-          showStatus("Network error", false);
-        }
+          if (res.ok) { showStatus("Saved!", true); setTimeout(closeSettings, 900); }
+          else showStatus(body.error || "Save failed", false);
+        } catch { showStatus("Network error", false); }
 
         saveBtn.disabled = false;
       }
@@ -905,12 +1017,13 @@
       $("#modalClose").addEventListener("click", closeSettings);
       $("#modalCancel").addEventListener("click", closeSettings);
       $("#saveBtn").addEventListener("click", saveConfig);
-      backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeSettings(); });
-      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
+      backdrop.addEventListener("click", e => { if (e.target === backdrop) closeSettings(); });
+      document.addEventListener("keydown", e => { if (e.key === "Escape") closeSettings(); });
 
+      // ── Init ──────────────────────────────────────────────────────────────
       document.addEventListener("DOMContentLoaded", () => {
         loadData();
-        setInterval(loadData, 30000);
+        setInterval(loadData, 15000); // poll every 15s
       });
     </script>
   </body>
