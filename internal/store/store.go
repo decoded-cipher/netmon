@@ -130,7 +130,7 @@ func (s *Store) GetHistory(limit int) ([]Measurement, error) {
 			return nil, err
 		}
 		t, _ := time.Parse(time.RFC3339, ts)
-		m.Time = t.Format("15:04")
+		m.Time = t.Format("15:04:05")
 		results = append(results, m)
 	}
 
