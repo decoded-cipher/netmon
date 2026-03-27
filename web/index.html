@@ -222,18 +222,18 @@
       .theme-toggle:hover { border-color: var(--border-hover); background: var(--input-hover-bg); color: var(--fg); }
 
       .target-table {
-        width: 100%; border-collapse: collapse; font-size: 0.8125rem;
+        width: 100%; border-collapse: collapse; font-size: 0.75rem;
         table-layout: auto;
       }
       .target-table th {
-        text-align: left; font-size: 0.6875rem; font-weight: 600;
+        text-align: left; font-size: 0.625rem; font-weight: 600;
         text-transform: uppercase; letter-spacing: 0.05em;
-        color: var(--muted); padding: 0.4rem 0.5rem;
+        color: var(--muted); padding: 0.3rem 0.375rem;
         border-bottom: 1px solid var(--border); white-space: nowrap;
       }
       .target-table th:not(:first-child) { text-align: right; }
       .target-table td {
-        padding: 0.45rem 0.5rem;
+        padding: 0.35rem 0.375rem;
         border-bottom: 1px solid var(--border);
         color: var(--fg);
       }
@@ -243,14 +243,14 @@
       .target-table tr:last-child td { border-bottom: none; }
       .target-table tr:nth-child(even) td { background: var(--table-stripe); }
       .target-table .host-cell {
-        font-weight: 600; display: flex; align-items: center; gap: 0.4rem;
+        font-weight: 600; display: flex; align-items: center; gap: 0.3rem;
       }
       .target-table .ip-cell {
         font-family: 'SF Mono', 'Fira Code', monospace;
-        font-size: 0.6875rem; color: var(--muted);
+        font-size: 0.625rem; color: var(--muted);
       }
       .inline-dot {
-        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+        width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
       }
       .inline-dot.up { background: var(--green); }
       .inline-dot.down { background: var(--red); }
@@ -670,7 +670,7 @@
           </div>
 
           <!-- Targets table -->
-          <div class="card p-4 flex-1 min-h-0 flex flex-col">
+          <div class="card p-3 flex-1 min-h-0 flex flex-col">
             <div class="section-label">
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
               Connectivity
@@ -690,7 +690,7 @@
           </div>
 
           <!-- DNS table -->
-          <div class="card p-4 flex flex-col">
+          <div class="card p-3 flex flex-col">
             <div class="section-label">
               <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
               DNS Lookups
