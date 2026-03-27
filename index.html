@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Network Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #f0f2f5;
+        --fg: #1a1d23;
+        --card: #ffffff;
+        --card-hover: #ffffff;
+        --border: #e2e5ea;
+        --border-hover: #d1d5db;
+        --muted: #9ca3af;
+        --subtle: #6b7280;
+        --accent: #3b82f6;
+        --accent-soft: rgba(59,130,246,0.08);
+        --green: #10b981;
+        --green-soft: rgba(16,185,129,0.1);
+        --red: #ef4444;
+        --red-soft: rgba(239,68,68,0.1);
+        --yellow: #f59e0b;
+        --yellow-soft: rgba(245,158,11,0.1);
+        --purple: #8b5cf6;
+        --purple-soft: rgba(139,92,246,0.1);
+        --input-hover-bg: #f9fafb;
+        --shadow: rgba(0,0,0,0.03);
+        --shadow-hover: rgba(0,0,0,0.06);
+        --table-stripe: rgba(0,0,0,0.015);
+      }
+
+      .dark-mode {
+        --bg: #0c1322;
+        --fg: #e8ecf2;
+        --card: #151e30;
+        --card-hover: #1a2740;
+        --border: #243044;
+        --border-hover: #334764;
+        --muted: #7b8ba4;
+        --subtle: #a3b3c9;
+        --accent: #60a5fa;
+        --accent-soft: rgba(96,165,250,0.1);
+        --green: #34d399;
+        --green-soft: rgba(52,211,153,0.1);
+        --red: #f87171;
+        --red-soft: rgba(248,113,113,0.1);
+        --yellow: #fbbf24;
+        --yellow-soft: rgba(251,191,36,0.1);
+        --purple: #a78bfa;
+        --purple-soft: rgba(167,139,250,0.1);
+        --input-hover-bg: #1a2740;
+        --shadow: rgba(0,0,0,0.12);
+        --shadow-hover: rgba(0,0,0,0.2);
+        --table-stripe: rgba(255,255,255,0.02);
+      }
+
+      * { -webkit-font-smoothing: antialiased; font-family: 'Inter', sans-serif; box-sizing: border-box; }
+      body { background: var(--bg); color: var(--fg); margin: 0; }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 1px 3px var(--shadow);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+      .card:hover {
+        border-color: var(--border-hover);
+        box-shadow: 0 4px 16px var(--shadow-hover);
+      }
+
+      .metric-card {
+        padding: 1rem 1.125rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        position: relative;
+        overflow: hidden;
+      }
+      .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 3px; height: 100%;
+        border-radius: 3px 0 0 3px;
+      }
+      .metric-card[data-color="blue"]::before { background: var(--accent); }
+      .metric-card[data-color="green"]::before { background: var(--green); }
+      .metric-card[data-color="red"]::before { background: var(--red); }
+      .metric-card[data-color="yellow"]::before { background: var(--yellow); }
+      .metric-card[data-color="purple"]::before { background: var(--purple); }
+
+      .metric-icon {
+        width: 32px; height: 32px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.875rem; flex-shrink: 0;
+      }
+      .metric-icon.blue { background: var(--accent-soft); color: var(--accent); }
+      .metric-icon.green { background: var(--green-soft); color: var(--green); }
+      .metric-icon.red { background: var(--red-soft); color: var(--red); }
+      .metric-icon.yellow { background: var(--yellow-soft); color: var(--yellow); }
+      .metric-icon.purple { background: var(--purple-soft); color: var(--purple); }
+
+      .metric-label {
+        font-size: 0.6875rem; color: var(--muted); font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.05em;
+      }
+      .metric-value {
+        font-size: 1.375rem; font-weight: 800; letter-spacing: -0.02em;
+        line-height: 1.2;
+      }
+      .metric-sub {
+        font-size: 0.6875rem; color: var(--muted); font-weight: 500;
+      }
+
+      .chart-box { padding: 1rem 1rem 0.5rem; overflow: hidden; }
+      .chart-header {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 0.5rem;
+      }
+      .chart-header h3 {
+        font-size: 0.8125rem; font-weight: 700;
+        display: flex; align-items: center; gap: 0.375rem;
+      }
+      .chart-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        display: inline-block;
+      }
+
+      .status-badge {
+        display: inline-flex; align-items: center; gap: 0.375rem;
+        padding: 0.25rem 0.75rem; border-radius: 999px;
+        font-size: 0.75rem; font-weight: 600;
+      }
+      .status-badge.online {
+        background: var(--green-soft); color: var(--green);
+      }
+      .status-badge.degraded {
+        background: var(--yellow-soft); color: var(--yellow);
+      }
+      .status-badge.offline {
+        background: var(--red-soft); color: var(--red);
+      }
+      .status-dot {
+        width: 6px; height: 6px; border-radius: 50%;
+        animation: pulse-dot 2s infinite;
+      }
+      .status-badge.online .status-dot { background: var(--green); }
+      .status-badge.degraded .status-dot { background: var(--yellow); }
+      .status-badge.offline .status-dot { background: var(--red); }
+
+      @keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+
+      .select-input {
+        background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+        padding: 0.5rem 0.75rem; color: var(--fg); font-size: 0.8125rem;
+        font-weight: 500; cursor: pointer; transition: all 0.15s ease;
+      }
+      .select-input:hover { border-color: var(--border-hover); background: var(--input-hover-bg); }
+      .select-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+
+      .theme-toggle {
+        background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+        width: 36px; height: 36px; cursor: pointer; font-size: 1.125rem;
+        display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+      }
+      .theme-toggle:hover { border-color: var(--border-hover); background: var(--input-hover-bg); }
+
+      .target-table {
+        width: 100%; border-collapse: collapse; font-size: 0.8125rem;
+      }
+      .target-table th {
+        text-align: left; font-size: 0.6875rem; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.05em;
+        color: var(--muted); padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .target-table td {
+        padding: 0.625rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--fg);
+      }
+      .target-table tr:last-child td { border-bottom: none; }
+      .target-table tr:nth-child(even) td { background: var(--table-stripe); }
+      .target-table .host-cell {
+        font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
+      }
+      .target-table .ip-cell {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-size: 0.75rem; color: var(--muted);
+      }
+      .inline-dot {
+        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+      }
+      .inline-dot.up { background: var(--green); }
+      .inline-dot.down { background: var(--red); }
+
+      .health-ring {
+        position: relative; width: 100px; height: 100px;
+      }
+      .health-ring svg { transform: rotate(-90deg); }
+      .health-ring .ring-bg {
+        fill: none; stroke: var(--border); stroke-width: 8;
+      }
+      .health-ring .ring-fg {
+        fill: none; stroke-width: 8; stroke-linecap: round;
+        transition: stroke-dashoffset 0.8s ease;
+      }
+      .health-score-text {
+        position: absolute; inset: 0; display: flex;
+        flex-direction: column; align-items: center; justify-content: center;
+      }
+      .health-score-num {
+        font-size: 1.5rem; font-weight: 800; line-height: 1;
+      }
+      .health-score-label {
+        font-size: 0.5625rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--muted); margin-top: 2px;
+      }
+
+      .section-label {
+        font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--muted); margin-bottom: 0.5rem;
+      }
+
+      @media (max-width: 639px) {
+        .metric-value { font-size: 1.125rem; }
+        .metric-card { padding: 0.75rem 0.875rem; }
+        .chart-box { padding: 0.75rem 0.75rem 0.25rem; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="flex flex-col h-screen px-4 sm:px-6 lg:px-8 py-4 max-w-[1680px] mx-auto overflow-y-auto lg:overflow-hidden">
+
+      <!-- Header -->
+      <header class="flex flex-wrap justify-between items-center gap-3 mb-4 flex-shrink-0">
+        <div class="flex items-center gap-3 sm:gap-4">
+          <div>
+            <div class="flex items-center gap-2.5">
+              <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight">Network Monitor</h1>
+              <span class="status-badge online" id="statusBadge">
+                <span class="status-dot"></span>
+                Online
+              </span>
+            </div>
+            <p class="text-xs mt-0.5" style="color: var(--subtle)">
+              Monitoring <span id="targetCount" class="font-semibold" style="color: var(--fg)">—</span> targets
+              · Updated <span id="lastUpdated" class="font-semibold" style="color: var(--fg)">—</span>
+            </p>
+          </div>
+        </div>
+        <div class="flex gap-2 items-center">
+          <select class="select-input" id="timeRange">
+            <option>Last 15 min</option>
+            <option>Last 1 hour</option>
+            <option>Last 24 hours</option>
+          </select>
+          <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+        </div>
+      </header>
+
+      <!-- Main grid -->
+      <div class="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 min-h-0 pb-4 lg:pb-0">
+
+        <!-- Left column: metrics + charts -->
+        <div class="flex flex-col gap-4 min-h-0">
+
+          <!-- Summary metric cards -->
+          <div id="summaryCards" class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-4 gap-3 flex-shrink-0"></div>
+
+          <!-- Charts 2x2 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 min-h-0">
+            <div class="card chart-box flex flex-col">
+              <div class="chart-header">
+                <h3><span class="chart-dot" style="background:var(--accent)"></span> Latency</h3>
+                <span class="text-xs font-medium" style="color:var(--muted)" id="latencyAvgLabel">—</span>
+              </div>
+              <div id="latencyChart" class="flex-1"></div>
+            </div>
+            <div class="card chart-box flex flex-col">
+              <div class="chart-header">
+                <h3><span class="chart-dot" style="background:var(--green)"></span> Throughput</h3>
+                <span class="text-xs font-medium" style="color:var(--muted)" id="speedAvgLabel">—</span>
+              </div>
+              <div id="speedChart" class="flex-1"></div>
+            </div>
+            <div class="card chart-box flex flex-col">
+              <div class="chart-header">
+                <h3><span class="chart-dot" style="background:var(--red)"></span> Packet Loss &amp; Jitter</h3>
+                <span class="text-xs font-medium" style="color:var(--muted)" id="lossAvgLabel">—</span>
+              </div>
+              <div id="lossChart" class="flex-1"></div>
+            </div>
+            <div class="card chart-box flex flex-col">
+              <div class="chart-header">
+                <h3><span class="chart-dot" style="background:var(--purple)"></span> DNS Resolution</h3>
+                <span class="text-xs font-medium" style="color:var(--muted)" id="dnsAvgLabel">—</span>
+              </div>
+              <div id="dnsChart" class="flex-1"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right sidebar -->
+        <div class="flex flex-col gap-4 min-h-0 lg:overflow-y-auto">
+
+          <!-- Health score card -->
+          <div class="card p-4 flex flex-col items-center" id="healthCard">
+            <div class="section-label w-full text-center mb-3">Connection Health</div>
+            <div class="health-ring" id="healthRing">
+              <svg viewBox="0 0 100 100" width="100" height="100">
+                <circle class="ring-bg" cx="50" cy="50" r="42" />
+                <circle class="ring-fg" cx="50" cy="50" r="42"
+                  stroke-dasharray="263.89" stroke-dashoffset="263.89" id="healthArc" />
+              </svg>
+              <div class="health-score-text">
+                <span class="health-score-num" id="healthNum">—</span>
+                <span class="health-score-label">Score</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-3 w-full mt-4 text-center" id="healthBreakdown">
+              <div>
+                <div class="text-xs font-bold" style="color:var(--green)" id="hbLatency">—</div>
+                <div class="text-[10px] font-medium" style="color:var(--muted)">Latency</div>
+              </div>
+              <div>
+                <div class="text-xs font-bold" style="color:var(--green)" id="hbLoss">—</div>
+                <div class="text-[10px] font-medium" style="color:var(--muted)">Loss</div>
+              </div>
+              <div>
+                <div class="text-xs font-bold" style="color:var(--green)" id="hbSpeed">—</div>
+                <div class="text-[10px] font-medium" style="color:var(--muted)">Speed</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Targets table -->
+          <div class="card p-4 flex-1 min-h-0 flex flex-col">
+            <div class="section-label">Ping Targets</div>
+            <div class="overflow-y-auto flex-1">
+              <table class="target-table" id="targetTable">
+                <thead>
+                  <tr>
+                    <th>Host</th>
+                    <th>Latency</th>
+                    <th>Loss</th>
+                  </tr>
+                </thead>
+                <tbody id="targetBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- DNS table -->
+          <div class="card p-4 flex flex-col">
+            <div class="section-label">DNS Lookups</div>
+            <table class="target-table" id="dnsTable">
+              <thead>
+                <tr>
+                  <th>Host</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="dnsBody"></tbody>
+            </table>
+          </div>
+
+          <!-- Quick stats footer -->
+          <div class="card p-3 flex-shrink-0">
+            <div class="section-label mb-2">24h Summary</div>
+            <div class="grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
+              <div class="flex justify-between">
+                <span style="color:var(--muted)">Uptime</span>
+                <span class="font-bold" id="qs-uptime">—</span>
+              </div>
+              <div class="flex justify-between">
+                <span style="color:var(--muted)">Outages</span>
+                <span class="font-bold" id="qs-outages">—</span>
+              </div>
+              <div class="flex justify-between">
+                <span style="color:var(--muted)">Peak DL</span>
+                <span class="font-bold" id="qs-peak-dl">—</span>
+              </div>
+              <div class="flex justify-between">
+                <span style="color:var(--muted)">Min Latency</span>
+                <span class="font-bold" id="qs-min-lat">—</span>
+              </div>
+              <div class="flex justify-between">
+                <span style="color:var(--muted)">Max Latency</span>
+                <span class="font-bold" id="qs-max-lat">—</span>
+              </div>
+              <div class="flex justify-between">
+                <span style="color:var(--muted)">Avg Jitter</span>
+                <span class="font-bold" id="qs-jitter">—</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (s) => document.querySelector(s);
+      let chartInstances = {};
+
+      async function loadData() {
+        const data = await fetch("/api/data").then(r => r.json()).catch(() => null);
+        if (!data) return;
+        renderHeader(data);
+        renderSummary(data.summary);
+        renderCharts(data.history, data.summary);
+        renderHealth(data.summary);
+        renderTargets(data.targets);
+        renderDNS(data.dns);
+        renderQuickStats(data.summary, data.history);
+      }
+
+      function renderHeader(data) {
+        const now = new Date();
+        $("#lastUpdated").textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        $("#targetCount").textContent = (data.targets || []).length;
+
+        const loss = data.summary.packet_loss;
+        const badge = $("#statusBadge");
+        if (loss > 5) {
+          badge.className = "status-badge offline";
+          badge.innerHTML = '<span class="status-dot"></span>Offline';
+        } else if (loss > 1) {
+          badge.className = "status-badge degraded";
+          badge.innerHTML = '<span class="status-dot"></span>Degraded';
+        } else {
+          badge.className = "status-badge online";
+          badge.innerHTML = '<span class="status-dot"></span>Online';
+        }
+      }
+
+      function renderSummary(s) {
+        const items = [
+          { label: "Avg Latency", value: s.latency_avg + " ms", icon: "⏱", color: "blue", sub: "p95 " + s.latency_p95 + " ms" },
+          { label: "Download", value: s.download_avg + " Mbps", icon: "↓", color: "green", sub: "avg throughput" },
+          { label: "Upload", value: s.upload_avg + " Mbps", icon: "↑", color: "purple", sub: "avg throughput" },
+          { label: "Packet Loss", value: s.packet_loss + "%", icon: "✕", color: s.packet_loss > 1 ? "red" : "green", sub: s.packet_loss < 1 ? "healthy" : "elevated" },
+        ];
+        $("#summaryCards").innerHTML = items.map(m =>
+          `<div class="card metric-card" data-color="${m.color}">
+            <div class="flex items-center justify-between">
+              <div class="metric-label">${m.label}</div>
+              <div class="metric-icon ${m.color}">${m.icon}</div>
+            </div>
+            <div class="metric-value">${m.value}</div>
+            <div class="metric-sub">${m.sub}</div>
+          </div>`
+        ).join("");
+      }
+
+      function renderCharts(history, summary) {
+        Object.values(chartInstances).forEach(c => c.destroy());
+        chartInstances = {};
+
+        if (!history || history.length === 0) return;
+
+        const times = history.map(h => h.time);
+        const isSmall = window.innerWidth < 640;
+        const isMd = window.innerWidth < 1024;
+        const h = isSmall ? 180 : isMd ? 200 : 220;
+
+        const base = {
+          chart: { background: "transparent", fontFamily: "'Inter',sans-serif", toolbar: { show: false }, height: h, animations: { speed: 600 } },
+          stroke: { curve: "smooth", width: 2.5 },
+          grid: { borderColor: "var(--border)", xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: -8, right: 8, bottom: 0, left: 8 } },
+          xaxis: {
+            categories: times,
+            labels: { style: { colors: "var(--muted)", fontSize: isSmall ? "9px" : "10px" }, rotate: 0, hideOverlappingLabels: true, maxHeight: 30 },
+            axisBorder: { show: false }, axisTicks: { show: false },
+          },
+          yaxis: { labels: { style: { colors: "var(--muted)", fontSize: isSmall ? "9px" : "10px" } } },
+          legend: { position: "top", fontSize: "10px", labels: { colors: "var(--subtle)" }, markers: { width: 6, height: 6, radius: 2 }, itemMargin: { horizontal: 8 } },
+          tooltip: { theme: document.body.classList.contains("dark-mode") ? "dark" : "light", style: { fontSize: "11px" } },
+        };
+
+        const fillArea = (opacity = 0.12) => ({ type: "gradient", gradient: { shadeIntensity: 0, opacityFrom: opacity, opacityTo: 0.01, stops: [0, 95] } });
+
+        $("#latencyAvgLabel").textContent = "avg " + summary.latency_avg + " ms";
+        chartInstances.latency = new ApexCharts($("#latencyChart"), {
+          ...base,
+          series: [{ name: "Latency (ms)", data: history.map(h => h.latency) }],
+          colors: ["#3b82f6"],
+          fill: fillArea(),
+        });
+        chartInstances.latency.render();
+
+        $("#speedAvgLabel").textContent = "↓" + summary.download_avg + "  ↑" + summary.upload_avg + " Mbps";
+        chartInstances.speed = new ApexCharts($("#speedChart"), {
+          ...base,
+          series: [
+            { name: "Download", data: history.map(h => h.download) },
+            { name: "Upload", data: history.map(h => h.upload) },
+          ],
+          colors: ["#10b981", "#8b5cf6"],
+          fill: fillArea(0.08),
+        });
+        chartInstances.speed.render();
+
+        $("#lossAvgLabel").textContent = "loss " + summary.packet_loss + "% · jitter " + summary.jitter_avg + " ms";
+        chartInstances.loss = new ApexCharts($("#lossChart"), {
+          ...base,
+          series: [
+            { name: "Loss (%)", data: history.map(h => h.loss) },
+            { name: "Jitter (ms)", data: history.map(h => h.jitter) },
+          ],
+          colors: ["#ef4444", "#f59e0b"],
+          fill: fillArea(0.1),
+          yaxis: [
+            { title: { text: "Loss %", style: { fontSize: "10px", color: "var(--muted)" } }, labels: { style: { colors: "var(--muted)", fontSize: "10px" } }, min: 0 },
+            { opposite: true, title: { text: "Jitter ms", style: { fontSize: "10px", color: "var(--muted)" } }, labels: { style: { colors: "var(--muted)", fontSize: "10px" } }, min: 0 },
+          ],
+        });
+        chartInstances.loss.render();
+
+        $("#dnsAvgLabel").textContent = "avg " + summary.dns_avg + " ms";
+        chartInstances.dns = new ApexCharts($("#dnsChart"), {
+          ...base,
+          series: [{ name: "DNS (ms)", data: history.map(h => h.dns) }],
+          colors: ["#8b5cf6"],
+          fill: fillArea(),
+        });
+        chartInstances.dns.render();
+      }
+
+      function renderHealth(s) {
+        let score = 100;
+        if (s.latency_avg > 50) score -= 20;
+        else if (s.latency_avg > 30) score -= 10;
+        else if (s.latency_avg > 20) score -= 5;
+
+        if (s.packet_loss > 5) score -= 30;
+        else if (s.packet_loss > 1) score -= 15;
+        else if (s.packet_loss > 0.5) score -= 5;
+
+        if (s.download_avg < 25) score -= 20;
+        else if (s.download_avg < 50) score -= 10;
+
+        if (s.jitter_avg > 10) score -= 10;
+        else if (s.jitter_avg > 5) score -= 5;
+
+        score = Math.max(0, Math.min(100, score));
+
+        const circ = 2 * Math.PI * 42;
+        const offset = circ - (score / 100) * circ;
+        const arc = $("#healthArc");
+        const color = score >= 80 ? "var(--green)" : score >= 50 ? "var(--yellow)" : "var(--red)";
+        arc.style.stroke = color;
+        requestAnimationFrame(() => { arc.style.strokeDashoffset = offset; });
+
+        $("#healthNum").textContent = score;
+        $("#healthNum").style.color = color;
+
+        const rateLabel = (val, good, warn) => {
+          if (val <= good) return { text: "Good", color: "var(--green)" };
+          if (val <= warn) return { text: "Fair", color: "var(--yellow)" };
+          return { text: "Poor", color: "var(--red)" };
+        };
+
+        const lat = rateLabel(s.latency_avg, 20, 50);
+        $("#hbLatency").textContent = lat.text;
+        $("#hbLatency").style.color = lat.color;
+
+        const loss = rateLabel(s.packet_loss, 0.5, 2);
+        $("#hbLoss").textContent = loss.text;
+        $("#hbLoss").style.color = loss.color;
+
+        const spd = s.download_avg >= 50 ? { text: "Good", color: "var(--green)" } : s.download_avg >= 25 ? { text: "Fair", color: "var(--yellow)" } : { text: "Poor", color: "var(--red)" };
+        $("#hbSpeed").textContent = spd.text;
+        $("#hbSpeed").style.color = spd.color;
+      }
+
+      function renderTargets(targets) {
+        if (!targets) return;
+        $("#targetBody").innerHTML = targets.map(t =>
+          `<tr>
+            <td>
+              <div class="host-cell">
+                <span class="inline-dot ${t.status === 'up' ? 'up' : 'down'}"></span>
+                <span>${t.host}</span>
+              </div>
+              <div class="ip-cell">${t.ip}</div>
+            </td>
+            <td class="font-semibold">${t.latency} ms</td>
+            <td>${t.loss}%</td>
+          </tr>`
+        ).join("");
+      }
+
+      function renderDNS(dns) {
+        if (!dns) return;
+        $("#dnsBody").innerHTML = dns.map(d =>
+          `<tr>
+            <td class="font-medium">${d.host}</td>
+            <td class="font-semibold">${d.time_ms} ms</td>
+          </tr>`
+        ).join("");
+      }
+
+      function renderQuickStats(s, history) {
+        const peakDl = Math.max(...history.map(h => h.download));
+        $("#qs-uptime").textContent = s.uptime_24h + "%";
+        $("#qs-outages").textContent = s.outages_24h;
+        $("#qs-peak-dl").textContent = peakDl + " Mbps";
+        $("#qs-min-lat").textContent = (s.latency_min || Math.min(...history.map(h => h.latency))) + " ms";
+        $("#qs-max-lat").textContent = (s.latency_max || Math.max(...history.map(h => h.latency))) + " ms";
+        $("#qs-jitter").textContent = s.jitter_avg + " ms";
+      }
+
+      // Theme toggle
+      const toggle = $("#themeToggle");
+      if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark-mode");
+        toggle.textContent = "☀️";
+      }
+      toggle.addEventListener("click", () => {
+        const dark = document.body.classList.toggle("dark-mode");
+        toggle.textContent = dark ? "☀️" : "🌙";
+        localStorage.setItem("theme", dark ? "dark" : "light");
+      });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        loadData();
+        setInterval(loadData, 30000);
+      });
+    </script>
+  </body>
+</html>

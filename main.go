@@ -1,63 +1,42 @@
 package main
 
 import (
-	"fmt"
-	"os/exec"
-	"regexp"
-	"strconv"
-	"strings"
+	"context"
+	"log/slog"
+	"os"
+
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
-var targets = []string{
-	"1.1.1.1",
-	"8.8.8.8",
-}
-
-func calculateAverage(times []float64) float64 {
-	if len(times) == 0 {
-		return 0
-	}
-	var sum float64
-	for _, time := range times {
-		sum += time
-	}
-	return sum / float64(len(times))
-}
-
-func parsePingOutput(output []byte) []float64 {	lines := strings.Split(string(output), "\n")
-	var pingTimes []float64
-	re := regexp.MustCompile(`time=([\d.]+) ms`)
-	for _, line := range lines {
-		matches := re.FindStringSubmatch(line)
-		if len(matches) == 2 {
-			time, err := strconv.ParseFloat(matches[1], 64)
-			if err == nil {
-				pingTimes = append(pingTimes, time)
-			}
-		}
-	}
-	return pingTimes
-}
-
-func ping(target string) []float64 {
-	cmd := exec.Command("ping", "-c", "4", target)
-	output, err := cmd.Output()
-	if err != nil {
-		fmt.Printf("Error pinging %s: %v\n", target, err)
-		return nil
-	}
-	return parsePingOutput(output)
-}
-
 func main() {
-	for _, target := range targets {
-		fmt.Printf("Pinging %s...\n", target)
-		pingTimes := ping(target)
-		if len(pingTimes) > 0 {
-			average := calculateAverage(pingTimes)
-			fmt.Printf("Average ping time to %s: %.2f ms\n", target, average)
-		} else {
-			fmt.Printf("No ping times recorded for %s.\n", target)
-		}
+	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
+
+	store, err := NewStore("netmon.db")
+	if err != nil {
+		log.Error("database init failed", "error", err)
+		os.Exit(1)
 	}
+	defer store.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	mon := NewMonitor(DefaultConfig(), store, log)
+	mon.Start(ctx)
+
+	e := echo.New()
+	e.Use(middleware.Recover())
+
+	h := NewHandler(store)
+	e.GET("/api/data", h.GetData)
+	e.File("/", "index.html")
+
+	log.Info("starting server", "addr", ":8080")
+	if err := e.Start(":8080"); err != nil {
+		log.Error("server stopped", "error", err)
+	}
+
+	cancel()
+	mon.Wait()
 }
