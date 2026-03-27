@@ -6,12 +6,18 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
 
+<p align="center">
+  <img src="docs/screenshot-dark.png" width="49%" alt="Dark mode" />
+  <img src="docs/screenshot-light.png" width="49%" alt="Light mode" />
+</p>
+
 
 ## Features
 
 - **Live dashboard** — auto-refreshing charts for latency, throughput, packet loss, jitter, and DNS
 - **Network change detection** — automatically detects Wi-Fi/network switches and tags measurements per network; works on macOS, Linux, Windows, Docker, and Raspberry Pi
-- **Self-contained binary** — single executable with embedded UI, no config files needed
+- **Settings UI** — configure ping targets, DNS targets, and intervals directly from the dashboard; changes persist across restarts
+- **`config.json`** — file-based defaults loaded at startup; overridden by any settings saved via the UI
 - **Lightweight** — pings every 60s, speed test every 30min (1 MB); negligible network overhead
 - **SQLite storage** — no database server; data persists in a single file
 - **Cross-platform** — runs on Linux (x86, ARM/Pi), macOS, Windows, and Docker
@@ -65,7 +71,10 @@ make docker-run # build + run Docker container
 
 ## Configuration
 
-All defaults live in `internal/monitor/monitor.go → DefaultConfig()`. There is no config file — rebuild or set env vars (support planned).
+Settings are resolved in this order — each step overrides the previous:
+
+1. **`config.json`** — edit this file to set your own defaults (loaded at startup)
+2. **Settings UI** — changes saved via the dashboard are persisted in SQLite and take priority over the file
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -81,6 +90,7 @@ All defaults live in `internal/monitor/monitor.go → DefaultConfig()`. There is
 
 ```
 cmd/netmon/          Entry point — wires packages, starts HTTP server
+config.json          Default configuration (overridden by UI settings saved to DB)
 internal/
   monitor/           Ping + speed workers (concurrent, 60s / 30m intervals)
   network/           Cross-platform gateway detection and SSID identification
@@ -88,12 +98,14 @@ internal/
   store/             SQLite layer — schema, UPSERT patterns, aggregation queries
 web/
   index.html         Single-page dashboard (TailwindCSS + ApexCharts, embedded at build time)
+  style.css          Dashboard styles (embedded)
+  script.js          Dashboard logic — data fetching, charts, UI interactions (embedded)
 ```
 
 **Data flow:**
 1. `pingWorker` pings all targets concurrently, resolves DNS, detects network — saves a `Measurement` row every 60s
 2. `speedWorker` downloads/uploads 1 MB to Cloudflare every 30 min — updates latest bandwidth values
-3. Dashboard polls `GET /api/data` every 30s and renders charts client-side
+3. Dashboard polls `GET /api/data` every 15s and renders charts client-side
 
 
 ## Platforms
