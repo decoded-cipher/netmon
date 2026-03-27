@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
@@ -70,6 +71,11 @@ func (s *Store) migrate() error {
 			network_id TEXT NOT NULL DEFAULT '',
 			ssid       TEXT NOT NULL DEFAULT '',
 			gateway    TEXT NOT NULL DEFAULT ''
+		);
+
+		CREATE TABLE IF NOT EXISTS settings (
+			key   TEXT PRIMARY KEY,
+			value TEXT NOT NULL DEFAULT ''
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_measurements_ts ON measurements(ts);
@@ -332,6 +338,43 @@ func (s *Store) GetCurrentNetworkID() string {
 	var id string
 	s.db.QueryRow(`SELECT network_id FROM network_events ORDER BY ts DESC LIMIT 1`).Scan(&id)
 	return id
+}
+
+// --- ConfigSettings ---
+
+// ConfigSettings is the persisted, user-editable subset of the monitor config.
+type ConfigSettings struct {
+	PingTargets    []string `json:"ping_targets"`
+	DNSTargets     []string `json:"dns_targets"`
+	PingIntervalS  int      `json:"ping_interval_s"`
+	SpeedIntervalM int      `json:"speed_interval_m"`
+	PingCount      int      `json:"ping_count"`
+}
+
+func (s *Store) GetConfig() (ConfigSettings, error) {
+	var raw string
+	err := s.db.QueryRow(`SELECT value FROM settings WHERE key = 'config'`).Scan(&raw)
+	if err == sql.ErrNoRows {
+		return ConfigSettings{}, sql.ErrNoRows
+	}
+	if err != nil {
+		return ConfigSettings{}, err
+	}
+	var cs ConfigSettings
+	return cs, json.Unmarshal([]byte(raw), &cs)
+}
+
+func (s *Store) SaveConfig(cs ConfigSettings) error {
+	b, err := json.Marshal(cs)
+	if err != nil {
+		return err
+	}
+	_, err = s.db.Exec(
+		`INSERT INTO settings (key, value) VALUES ('config', ?)
+		 ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+		string(b),
+	)
+	return err
 }
 
 func (s *Store) Close() error {

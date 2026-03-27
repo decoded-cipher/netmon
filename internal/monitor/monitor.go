@@ -35,7 +35,9 @@ func DefaultConfig() Config {
 }
 
 type Monitor struct {
+	cfgMu sync.RWMutex
 	cfg   Config
+
 	store *store.Store
 	log   *slog.Logger
 	wg    sync.WaitGroup
@@ -49,6 +51,36 @@ type Monitor struct {
 
 func New(cfg Config, s *store.Store, log *slog.Logger) *Monitor {
 	return &Monitor{cfg: cfg, store: s, log: log}
+}
+
+// GetConfig returns a snapshot of the current config.
+func (m *Monitor) GetConfig() Config {
+	m.cfgMu.RLock()
+	defer m.cfgMu.RUnlock()
+	return m.cfg
+}
+
+// SetConfig replaces the live config. Targets and ping count take effect on the
+// next ping cycle. Interval changes take effect after a restart.
+func (m *Monitor) SetConfig(cfg Config) {
+	m.cfgMu.Lock()
+	m.cfg = cfg
+	m.cfgMu.Unlock()
+}
+
+// ConfigFromStore converts persisted settings into a full Config,
+// filling URL fields from the compile-time defaults.
+func ConfigFromStore(cs store.ConfigSettings) Config {
+	def := DefaultConfig()
+	return Config{
+		PingTargets:   cs.PingTargets,
+		DNSTargets:    cs.DNSTargets,
+		PingInterval:  time.Duration(cs.PingIntervalS) * time.Second,
+		SpeedInterval: time.Duration(cs.SpeedIntervalM) * time.Minute,
+		PingCount:     cs.PingCount,
+		DownloadURL:   def.DownloadURL,
+		UploadURL:     def.UploadURL,
+	}
 }
 
 func (m *Monitor) Start(ctx context.Context) {
@@ -106,6 +138,8 @@ func (m *Monitor) speedWorker(ctx context.Context) {
 func (m *Monitor) runPingCycle() {
 	m.log.Info("ping cycle: start")
 
+	cfg := m.GetConfig() // snapshot config for this cycle
+
 	// Detect current network; log an event if it changed.
 	netInfo := network.Detect()
 	if netInfo.ID != m.currentNetworkID {
@@ -123,11 +157,11 @@ func (m *Monitor) runPingCycle() {
 		}
 	}
 
-	allTargets := make([]string, 0, len(m.cfg.PingTargets)+1)
+	allTargets := make([]string, 0, len(cfg.PingTargets)+1)
 	if netInfo.Gateway != "" {
 		allTargets = append(allTargets, netInfo.Gateway)
 	}
-	allTargets = append(allTargets, m.cfg.PingTargets...)
+	allTargets = append(allTargets, cfg.PingTargets...)
 
 	results := make([]pingResult, len(allTargets))
 	var wg sync.WaitGroup
@@ -135,7 +169,7 @@ func (m *Monitor) runPingCycle() {
 		wg.Add(1)
 		go func(idx int, t string) {
 			defer wg.Done()
-			avg, jitter, loss, err := runPing(t, m.cfg.PingCount)
+			avg, jitter, loss, err := runPing(t, cfg.PingCount)
 			ip := t
 			if net.ParseIP(t) == nil {
 				ip = resolveIP(t)
@@ -144,8 +178,8 @@ func (m *Monitor) runPingCycle() {
 		}(i, target)
 	}
 
-	dnsResults := make([]float64, len(m.cfg.DNSTargets))
-	for i, host := range m.cfg.DNSTargets {
+	dnsResults := make([]float64, len(cfg.DNSTargets))
+	for i, host := range cfg.DNSTargets {
 		wg.Add(1)
 		go func(idx int, h string) {
 			defer wg.Done()

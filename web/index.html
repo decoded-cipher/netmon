@@ -235,6 +235,88 @@
         .metric-card { padding: 0.75rem 0.875rem; }
         .chart-box { padding: 0.75rem 0.75rem 0.25rem; }
       }
+
+      /* Settings button */
+      .settings-btn {
+        background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+        width: 36px; height: 36px; cursor: pointer; font-size: 1rem;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.2s ease; color: var(--subtle);
+      }
+      .settings-btn:hover { border-color: var(--border-hover); background: var(--input-hover-bg); color: var(--fg); }
+
+      /* Modal backdrop */
+      .modal-backdrop {
+        position: fixed; inset: 0; z-index: 50;
+        background: rgba(0,0,0,0.45); backdrop-filter: blur(4px);
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem;
+        opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+      }
+      .modal-backdrop.open { opacity: 1; pointer-events: all; }
+
+      /* Modal card */
+      .modal {
+        background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+        box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+        width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+        transform: translateY(12px); transition: transform 0.2s ease;
+      }
+      .modal-backdrop.open .modal { transform: translateY(0); }
+
+      .modal-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+      }
+      .modal-header h2 { font-size: 1rem; font-weight: 700; }
+      .modal-close {
+        background: none; border: none; cursor: pointer; color: var(--muted);
+        font-size: 1.25rem; line-height: 1; padding: 0.25rem;
+        border-radius: 6px; transition: color 0.15s;
+      }
+      .modal-close:hover { color: var(--fg); }
+
+      .modal-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+      .field-group { display: flex; flex-direction: column; gap: 0.375rem; }
+      .field-label {
+        font-size: 0.75rem; font-weight: 600; color: var(--subtle);
+        text-transform: uppercase; letter-spacing: 0.05em;
+      }
+      .field-hint { font-size: 0.7rem; color: var(--muted); margin-top: 0.25rem; }
+      .field-input {
+        background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+        padding: 0.5rem 0.75rem; color: var(--fg); font-size: 0.875rem;
+        width: 100%; transition: border-color 0.15s, box-shadow 0.15s;
+        font-family: inherit;
+      }
+      .field-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+      textarea.field-input { resize: vertical; min-height: 72px; }
+
+      .field-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; }
+
+      .modal-footer {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 1rem 1.5rem; border-top: 1px solid var(--border); gap: 0.75rem;
+      }
+      .modal-note { font-size: 0.7rem; color: var(--muted); }
+      .modal-actions { display: flex; gap: 0.5rem; }
+
+      .btn {
+        padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.8125rem;
+        font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+      }
+      .btn-ghost {
+        background: transparent; border: 1px solid var(--border); color: var(--subtle);
+      }
+      .btn-ghost:hover { border-color: var(--border-hover); color: var(--fg); }
+      .btn-primary { background: var(--accent); color: #fff; }
+      .btn-primary:hover { opacity: 0.88; }
+      .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .save-status { font-size: 0.75rem; font-weight: 500; }
+      .save-status.ok { color: var(--green); }
+      .save-status.err { color: var(--red); }
     </style>
   </head>
 
@@ -266,8 +348,56 @@
             <option>Last 24 hours</option>
           </select>
           <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+          <button class="settings-btn" id="settingsBtn" title="Settings">⚙</button>
         </div>
       </header>
+
+      <!-- Settings Modal -->
+      <div class="modal-backdrop" id="modalBackdrop">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+          <div class="modal-header">
+            <h2 id="modalTitle">⚙ Monitor Settings</h2>
+            <button class="modal-close" id="modalClose" title="Close">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="field-group">
+              <label class="field-label" for="cfgPingTargets">Ping Targets</label>
+              <textarea class="field-input" id="cfgPingTargets" rows="3" placeholder="One host per line, e.g. google.com"></textarea>
+              <div class="field-hint">One hostname or IP per line. Gateway is added automatically.</div>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="cfgDnsTargets">DNS Targets</label>
+              <textarea class="field-input" id="cfgDnsTargets" rows="2" placeholder="One host per line, e.g. cloudflare.com"></textarea>
+              <div class="field-hint">Hosts used to measure DNS resolution time.</div>
+            </div>
+            <div class="field-row">
+              <div class="field-group">
+                <label class="field-label" for="cfgPingInterval">Ping Interval (s)</label>
+                <input class="field-input" type="number" id="cfgPingInterval" min="10" max="3600" placeholder="60" />
+                <div class="field-hint">Min 10 s</div>
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="cfgSpeedInterval">Speed Interval (min)</label>
+                <input class="field-input" type="number" id="cfgSpeedInterval" min="5" max="1440" placeholder="30" />
+                <div class="field-hint">Min 5 min</div>
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="cfgPingCount">Ping Count</label>
+                <input class="field-input" type="number" id="cfgPingCount" min="1" max="20" placeholder="5" />
+                <div class="field-hint">1–20 per cycle</div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <span class="modal-note">Interval changes take effect after restart.</span>
+            <div class="modal-actions">
+              <span class="save-status" id="saveStatus"></span>
+              <button class="btn btn-ghost" id="modalCancel">Cancel</button>
+              <button class="btn btn-primary" id="saveBtn">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Main grid -->
       <div class="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 min-h-0 pb-4 lg:pb-0">
@@ -643,6 +773,80 @@
         toggle.textContent = dark ? "☀️" : "🌙";
         localStorage.setItem("theme", dark ? "dark" : "light");
       });
+
+      // Settings modal
+      const backdrop = $("#modalBackdrop");
+
+      function openSettings() {
+        backdrop.classList.add("open");
+        loadConfig();
+      }
+
+      function closeSettings() {
+        backdrop.classList.remove("open");
+        $("#saveStatus").textContent = "";
+      }
+
+      async function loadConfig() {
+        try {
+          const cfg = await fetch("/api/config").then(r => r.json());
+          $("#cfgPingTargets").value = (cfg.ping_targets || []).join("\n");
+          $("#cfgDnsTargets").value = (cfg.dns_targets || []).join("\n");
+          $("#cfgPingInterval").value = cfg.ping_interval_s || 60;
+          $("#cfgSpeedInterval").value = cfg.speed_interval_m || 30;
+          $("#cfgPingCount").value = cfg.ping_count || 5;
+        } catch (e) {
+          showStatus("Failed to load config", false);
+        }
+      }
+
+      async function saveConfig() {
+        const saveBtn = $("#saveBtn");
+        saveBtn.disabled = true;
+
+        const pingTargets = $("#cfgPingTargets").value.split("\n").map(s => s.trim()).filter(Boolean);
+        const dnsTargets = $("#cfgDnsTargets").value.split("\n").map(s => s.trim()).filter(Boolean);
+        const pingIntervalS = parseInt($("#cfgPingInterval").value, 10);
+        const speedIntervalM = parseInt($("#cfgSpeedInterval").value, 10);
+        const pingCount = parseInt($("#cfgPingCount").value, 10);
+
+        if (pingTargets.length === 0) { showStatus("Ping targets cannot be empty", false); saveBtn.disabled = false; return; }
+        if (pingIntervalS < 10) { showStatus("Ping interval must be ≥ 10 s", false); saveBtn.disabled = false; return; }
+        if (speedIntervalM < 5) { showStatus("Speed interval must be ≥ 5 min", false); saveBtn.disabled = false; return; }
+        if (pingCount < 1 || pingCount > 20) { showStatus("Ping count must be 1–20", false); saveBtn.disabled = false; return; }
+
+        try {
+          const res = await fetch("/api/config", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ping_targets: pingTargets, dns_targets: dnsTargets, ping_interval_s: pingIntervalS, speed_interval_m: speedIntervalM, ping_count: pingCount }),
+          });
+          const body = await res.json();
+          if (res.ok) {
+            showStatus("Saved!", true);
+            setTimeout(closeSettings, 900);
+          } else {
+            showStatus(body.error || "Save failed", false);
+          }
+        } catch (e) {
+          showStatus("Network error", false);
+        }
+
+        saveBtn.disabled = false;
+      }
+
+      function showStatus(msg, ok) {
+        const el = $("#saveStatus");
+        el.textContent = msg;
+        el.className = "save-status " + (ok ? "ok" : "err");
+      }
+
+      $("#settingsBtn").addEventListener("click", openSettings);
+      $("#modalClose").addEventListener("click", closeSettings);
+      $("#modalCancel").addEventListener("click", closeSettings);
+      $("#saveBtn").addEventListener("click", saveConfig);
+      backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeSettings(); });
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
 
       document.addEventListener("DOMContentLoaded", () => {
         loadData();

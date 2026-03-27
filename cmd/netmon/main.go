@@ -25,17 +25,26 @@ func main() {
 	}
 	defer s.Close()
 
+	// Load saved config from DB; fall back to compile-time defaults.
+	cfg := monitor.DefaultConfig()
+	if cs, err := s.GetConfig(); err == nil {
+		cfg = monitor.ConfigFromStore(cs)
+		log.Info("loaded config from database")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mon := monitor.New(monitor.DefaultConfig(), s, log)
+	mon := monitor.New(cfg, s, log)
 	mon.Start(ctx)
 
 	e := echo.New()
 	e.Use(middleware.Recover())
 
-	h := server.NewHandler(s)
+	h := server.NewHandler(s, mon)
 	e.GET("/api/data", h.GetData)
+	e.GET("/api/config", h.GetConfig)
+	e.POST("/api/config", h.SaveConfig)
 	e.GET("/", func(c *echo.Context) error {
 		data, err := web.FS.ReadFile("index.html")
 		if err != nil {
