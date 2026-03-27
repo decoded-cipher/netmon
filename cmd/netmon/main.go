@@ -52,6 +52,20 @@ func main() {
 		}
 		return c.HTMLBlob(http.StatusOK, data)
 	})
+	e.GET("/style.css", func(c *echo.Context) error {
+		data, err := web.FS.ReadFile("style.css")
+		if err != nil {
+			return err
+		}
+		return c.Blob(http.StatusOK, "text/css", data)
+	})
+	e.GET("/script.js", func(c *echo.Context) error {
+		data, err := web.FS.ReadFile("script.js")
+		if err != nil {
+			return err
+		}
+		return c.Blob(http.StatusOK, "application/javascript", data)
+	})
 
 	log.Info("starting server", "addr", ":8080")
 	if err := e.Start(":8080"); err != nil {
