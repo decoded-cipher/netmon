@@ -1,25 +1,27 @@
-package main
+package server
 
 import (
 	"net/http"
 
 	"github.com/labstack/echo/v5"
+
+	"netmon/internal/store"
 )
 
 type Handler struct {
-	store *Store
+	store *store.Store
 }
 
-func NewHandler(store *Store) *Handler {
-	return &Handler{store: store}
+func NewHandler(s *store.Store) *Handler {
+	return &Handler{store: s}
 }
 
 type DashboardData struct {
-	Summary   Summary      `json:"summary"`
-	Targets   []PingTarget `json:"targets"`
-	DNS       []DNSCheck   `json:"dns"`
-	History   []Measurement `json:"history"`
-	NetworkID string        `json:"network_id"`
+	Summary   store.Summary      `json:"summary"`
+	Targets   []store.PingTarget `json:"targets"`
+	DNS       []store.DNSCheck   `json:"dns"`
+	History   []store.Measurement `json:"history"`
+	NetworkID string              `json:"network_id"`
 }
 
 func (h *Handler) GetData(c *echo.Context) error {

@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	"database/sql"
@@ -14,7 +14,7 @@ type Store struct {
 	db *sql.DB
 }
 
-func NewStore(path string) (*Store, error) {
+func New(path string) (*Store, error) {
 	db, err := sql.Open("sqlite3", path+"?_journal_mode=WAL&_busy_timeout=5000")
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
@@ -35,15 +35,15 @@ func NewStore(path string) (*Store, error) {
 func (s *Store) migrate() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS measurements (
-			id         INTEGER PRIMARY KEY AUTOINCREMENT,
-			ts         TEXT NOT NULL,
-			network_id TEXT NOT NULL DEFAULT '',
-			latency    REAL NOT NULL DEFAULT 0,
-			jitter     REAL NOT NULL DEFAULT 0,
+			id          INTEGER PRIMARY KEY AUTOINCREMENT,
+			ts          TEXT NOT NULL,
+			network_id  TEXT NOT NULL DEFAULT '',
+			latency     REAL NOT NULL DEFAULT 0,
+			jitter      REAL NOT NULL DEFAULT 0,
 			packet_loss REAL NOT NULL DEFAULT 0,
-			download   REAL NOT NULL DEFAULT 0,
-			upload     REAL NOT NULL DEFAULT 0,
-			dns        REAL NOT NULL DEFAULT 0
+			download    REAL NOT NULL DEFAULT 0,
+			upload      REAL NOT NULL DEFAULT 0,
+			dns         REAL NOT NULL DEFAULT 0
 		);
 
 		CREATE TABLE IF NOT EXISTS ping_targets (
@@ -79,10 +79,14 @@ func (s *Store) migrate() error {
 		return err
 	}
 
-	// Add network_id to existing measurements rows (no-op if column already exists).
+	// Add network_id to existing measurements table (no-op if column already exists).
 	s.db.Exec(`ALTER TABLE measurements ADD COLUMN network_id TEXT NOT NULL DEFAULT ''`)
 
 	return nil
+}
+
+func round1(v float64) float64 {
+	return math.Round(v*10) / 10
 }
 
 // --- Measurement ---
@@ -156,10 +160,6 @@ type Summary struct {
 	Outages24h  int     `json:"outages_24h"`
 }
 
-func round1(v float64) float64 {
-	return math.Round(v*10) / 10
-}
-
 func (s *Store) GetSummary() (Summary, error) {
 	var sum Summary
 	cutoff := time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
@@ -193,7 +193,6 @@ func (s *Store) GetSummary() (Summary, error) {
 	sum.DownloadAvg = round1(sum.DownloadAvg)
 	sum.UploadAvg = round1(sum.UploadAvg)
 
-	// P95 latency
 	rows, err := s.db.Query(
 		`SELECT latency FROM measurements WHERE ts >= ? ORDER BY latency`, cutoff,
 	)
