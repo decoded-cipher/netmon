@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math"
 	"net"
@@ -136,6 +137,7 @@ func (m *Monitor) speedWorker(ctx context.Context) {
 }
 
 func (m *Monitor) runPingCycle() {
+	fmt.Println()
 	m.log.Info("ping cycle: start")
 
 	cfg := m.GetConfig() // snapshot config for this cycle
