@@ -455,6 +455,42 @@ textarea.field-input { resize: none; }
 .save-status.err { color: var(--red); }
 
 
+/* ── Accordion sidebar sections ───────────────────────────────── */
+.accordion-toggle {
+  cursor: pointer;
+  user-select: none;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 0 !important;
+  transition: opacity 0.15s;
+}
+.accordion-toggle:hover { opacity: 0.72; }
+
+.accordion-chevron {
+  color: var(--muted);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+.s-collapsed .accordion-chevron { transform: rotate(-90deg); }
+
+/* CSS grid trick: animates height without knowing explicit px value */
+.accordion-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.25s ease, opacity 0.2s ease;
+  opacity: 1;
+}
+.accordion-body-inner {
+  overflow: hidden;
+  min-height: 0;
+  padding-top: 0.625rem;
+}
+.s-collapsed .accordion-body {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* ── Toast notifications ───────────────────────────────────────── */
 .toast-container {
   position: fixed; bottom: 1rem; right: 1rem;

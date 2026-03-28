@@ -77,6 +77,7 @@ async function loadData(forceRecreate = false) {
   renderHealth(data.summary);
   renderTargets(data.targets);
   renderDNS(data.dns);
+  renderConnection(data.history);
   renderQuickStats(data.summary, data.history);
   prevSummary = data.summary;
 }
@@ -249,6 +250,69 @@ function renderDNS(dns) {
       <td class="font-semibold">${d.time_ms} ms</td>
     </tr>`
   ).join("");
+}
+
+function renderConnection(history) {
+  const card = document.getElementById('connCard');
+  if (!card || !history || history.length === 0) return;
+  const latest = history[history.length - 1];
+  const type = latest.conn_type;
+
+  if (!type) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const wifiDetails = document.getElementById('conn-wifi-details');
+  const ethDetails  = document.getElementById('conn-eth-details');
+  const wifiIcon    = document.getElementById('conn-icon-wifi');
+  const ethIcon     = document.getElementById('conn-icon-eth');
+  const title       = document.getElementById('conn-section-title');
+
+  if (type === 'wifi') {
+    title.textContent          = 'WiFi Signal';
+    wifiIcon.style.display     = '';
+    ethIcon.style.display      = 'none';
+    wifiDetails.style.display  = '';
+    ethDetails.style.display   = 'none';
+
+    const rssi = latest.conn_rssi;
+    const snr  = latest.conn_snr;
+    const band = latest.conn_band;
+    const ch   = latest.conn_channel;
+    const rate = latest.conn_link_rate;
+
+    const pct = Math.max(0, Math.min(100, ((rssi + 90) / 60) * 100));
+    let quality, color;
+    if      (rssi >= -50) { quality = 'Excellent'; color = 'var(--green)';  }
+    else if (rssi >= -65) { quality = 'Good';      color = 'var(--green)';  }
+    else if (rssi >= -75) { quality = 'Fair';      color = 'var(--yellow)'; }
+    else                  { quality = 'Poor';      color = 'var(--red)';    }
+
+    const rssiEl = document.getElementById('wifi-rssi');
+    rssiEl.textContent = rssi + ' dBm';
+    rssiEl.style.color = color;
+    document.getElementById('wifi-snr').textContent       = snr  ? snr  + ' dB'   : '—';
+    document.getElementById('wifi-link-rate').textContent = rate ? rate + ' Mbps'  : '—';
+    document.getElementById('wifi-band-ch').textContent   = [band, ch ? 'ch. ' + ch : ''].filter(Boolean).join(' · ') || '—';
+
+    const bar = document.getElementById('wifi-signal-bar');
+    if (bar) { bar.style.width = pct + '%'; bar.style.background = color; }
+    const ql = document.getElementById('wifi-quality-label');
+    if (ql) { ql.textContent = quality; ql.style.color = color; }
+
+  } else if (type === 'ethernet') {
+    title.textContent         = 'Ethernet';
+    wifiIcon.style.display    = 'none';
+    ethIcon.style.display     = '';
+    wifiDetails.style.display = 'none';
+    ethDetails.style.display  = '';
+
+    const rate   = latest.conn_link_rate;
+    const duplex = latest.conn_duplex;
+    const speedEl = document.getElementById('eth-link-speed');
+    speedEl.textContent = rate ? (rate >= 1000 ? (rate / 1000) + ' Gbps' : rate + ' Mbps') : '—';
+    speedEl.style.color = rate >= 1000 ? 'var(--green)' : 'var(--fg)';
+    document.getElementById('eth-duplex').textContent = duplex ? duplex.charAt(0).toUpperCase() + duplex.slice(1) + ' duplex' : '—';
+  }
 }
 
 function renderQuickStats(s, history) {
@@ -443,8 +507,23 @@ $("#saveBtn").addEventListener("click", saveConfig);
 backdrop.addEventListener("click", e => { if (e.target === backdrop) closeSettings(); });
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeSettings(); });
 
+// ── Accordion ─────────────────────────────────────────────────────────
+function initAccordions() {
+  document.querySelectorAll('.accordion-toggle').forEach(toggle => {
+    const card = toggle.closest('[data-section]');
+    if (!card) return;
+    const key = 'acc-' + card.dataset.section;
+    if (localStorage.getItem(key) === '1') card.classList.add('s-collapsed');
+    toggle.addEventListener('click', () => {
+      const collapsed = card.classList.toggle('s-collapsed');
+      localStorage.setItem(key, collapsed ? '1' : '0');
+    });
+  });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
+  initAccordions();
   loadData();
   setInterval(loadData, 15000); // poll every 15s
 });

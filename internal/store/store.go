@@ -36,15 +36,23 @@ func New(path string) (*Store, error) {
 func (s *Store) migrate() error {
 	_, err := s.db.Exec(`
 		CREATE TABLE IF NOT EXISTS measurements (
-			id          INTEGER PRIMARY KEY AUTOINCREMENT,
-			ts          TEXT NOT NULL,
-			network_id  TEXT NOT NULL DEFAULT '',
-			latency     REAL NOT NULL DEFAULT 0,
-			jitter      REAL NOT NULL DEFAULT 0,
-			packet_loss REAL NOT NULL DEFAULT 0,
-			download    REAL NOT NULL DEFAULT 0,
-			upload      REAL NOT NULL DEFAULT 0,
-			dns         REAL NOT NULL DEFAULT 0
+			id            INTEGER PRIMARY KEY AUTOINCREMENT,
+			ts            TEXT    NOT NULL,
+			network_id    TEXT    NOT NULL DEFAULT '',
+			latency       REAL    NOT NULL DEFAULT 0,
+			jitter        REAL    NOT NULL DEFAULT 0,
+			packet_loss   REAL    NOT NULL DEFAULT 0,
+			download      REAL    NOT NULL DEFAULT 0,
+			upload        REAL    NOT NULL DEFAULT 0,
+			dns           REAL    NOT NULL DEFAULT 0,
+			conn_type     TEXT    NOT NULL DEFAULT '',
+			conn_rssi     INTEGER NOT NULL DEFAULT 0,
+			conn_noise    INTEGER NOT NULL DEFAULT 0,
+			conn_snr      INTEGER NOT NULL DEFAULT 0,
+			conn_channel  INTEGER NOT NULL DEFAULT 0,
+			conn_band     TEXT    NOT NULL DEFAULT '',
+			conn_link_rate INTEGER NOT NULL DEFAULT 0,
+			conn_duplex   TEXT    NOT NULL DEFAULT ''
 		);
 
 		CREATE TABLE IF NOT EXISTS ping_targets (
@@ -85,7 +93,7 @@ func (s *Store) migrate() error {
 		return err
 	}
 
-	// Add network_id to existing measurements table (no-op if column already exists).
+	// Add network_id to measurements table for pre-WiFi databases (no-op if already exists).
 	s.db.Exec(`ALTER TABLE measurements ADD COLUMN network_id TEXT NOT NULL DEFAULT ''`)
 
 	return nil
@@ -98,29 +106,41 @@ func round1(v float64) float64 {
 // --- Measurement ---
 
 type Measurement struct {
-	ID         int64   `json:"id"`
-	Time       string  `json:"time"`
-	NetworkID  string  `json:"network_id"`
-	Latency    float64 `json:"latency"`
-	Jitter     float64 `json:"jitter"`
-	PacketLoss float64 `json:"loss"`
-	Download   float64 `json:"download"`
-	Upload     float64 `json:"upload"`
-	DNS        float64 `json:"dns"`
+	ID           int64   `json:"id"`
+	Time         string  `json:"time"`
+	NetworkID    string  `json:"network_id"`
+	Latency      float64 `json:"latency"`
+	Jitter       float64 `json:"jitter"`
+	PacketLoss   float64 `json:"loss"`
+	Download     float64 `json:"download"`
+	Upload       float64 `json:"upload"`
+	DNS          float64 `json:"dns"`
+	ConnType     string  `json:"conn_type"`
+	ConnRSSI     int     `json:"conn_rssi"`
+	ConnNoise    int     `json:"conn_noise"`
+	ConnSNR      int     `json:"conn_snr"`
+	ConnChannel  int     `json:"conn_channel"`
+	ConnBand     string  `json:"conn_band"`
+	ConnLinkRate int     `json:"conn_link_rate"`
+	ConnDuplex   string  `json:"conn_duplex"`
 }
 
 func (s *Store) SaveMeasurement(m Measurement) error {
 	_, err := s.db.Exec(
-		`INSERT INTO measurements (ts, network_id, latency, jitter, packet_loss, download, upload, dns)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO measurements
+		 (ts, network_id, latency, jitter, packet_loss, download, upload, dns,
+		  conn_type, conn_rssi, conn_noise, conn_snr, conn_channel, conn_band, conn_link_rate, conn_duplex)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		m.Time, m.NetworkID, m.Latency, m.Jitter, m.PacketLoss, m.Download, m.Upload, m.DNS,
+		m.ConnType, m.ConnRSSI, m.ConnNoise, m.ConnSNR, m.ConnChannel, m.ConnBand, m.ConnLinkRate, m.ConnDuplex,
 	)
 	return err
 }
 
 func (s *Store) GetHistory(limit int) ([]Measurement, error) {
 	rows, err := s.db.Query(
-		`SELECT id, ts, network_id, latency, jitter, packet_loss, download, upload, dns
+		`SELECT id, ts, network_id, latency, jitter, packet_loss, download, upload, dns,
+		        conn_type, conn_rssi, conn_noise, conn_snr, conn_channel, conn_band, conn_link_rate, conn_duplex
 		 FROM measurements ORDER BY ts DESC LIMIT ?`, limit,
 	)
 	if err != nil {
@@ -132,7 +152,10 @@ func (s *Store) GetHistory(limit int) ([]Measurement, error) {
 	for rows.Next() {
 		var m Measurement
 		var ts string
-		if err := rows.Scan(&m.ID, &ts, &m.NetworkID, &m.Latency, &m.Jitter, &m.PacketLoss, &m.Download, &m.Upload, &m.DNS); err != nil {
+		if err := rows.Scan(
+			&m.ID, &ts, &m.NetworkID, &m.Latency, &m.Jitter, &m.PacketLoss, &m.Download, &m.Upload, &m.DNS,
+			&m.ConnType, &m.ConnRSSI, &m.ConnNoise, &m.ConnSNR, &m.ConnChannel, &m.ConnBand, &m.ConnLinkRate, &m.ConnDuplex,
+		); err != nil {
 			return nil, err
 		}
 		t, _ := time.Parse(time.RFC3339, ts)
@@ -153,7 +176,8 @@ func (s *Store) GetHistory(limit int) ([]Measurement, error) {
 func (s *Store) GetHistoryWindow(minutes int) ([]Measurement, error) {
 	cutoff := time.Now().Add(-time.Duration(minutes) * time.Minute).Format(time.RFC3339)
 	rows, err := s.db.Query(
-		`SELECT id, ts, network_id, latency, jitter, packet_loss, download, upload, dns
+		`SELECT id, ts, network_id, latency, jitter, packet_loss, download, upload, dns,
+		        conn_type, conn_rssi, conn_noise, conn_snr, conn_channel, conn_band, conn_link_rate, conn_duplex
 		 FROM measurements WHERE ts >= ? ORDER BY ts ASC`, cutoff,
 	)
 	if err != nil {
@@ -175,7 +199,10 @@ func (s *Store) GetHistoryWindow(minutes int) ([]Measurement, error) {
 	for rows.Next() {
 		var m Measurement
 		var ts string
-		if err := rows.Scan(&m.ID, &ts, &m.NetworkID, &m.Latency, &m.Jitter, &m.PacketLoss, &m.Download, &m.Upload, &m.DNS); err != nil {
+		if err := rows.Scan(
+			&m.ID, &ts, &m.NetworkID, &m.Latency, &m.Jitter, &m.PacketLoss, &m.Download, &m.Upload, &m.DNS,
+			&m.ConnType, &m.ConnRSSI, &m.ConnNoise, &m.ConnSNR, &m.ConnChannel, &m.ConnBand, &m.ConnLinkRate, &m.ConnDuplex,
+		); err != nil {
 			return nil, err
 		}
 		t, _ := time.Parse(time.RFC3339, ts)

@@ -209,107 +209,190 @@
         <!-- Right sidebar -->
         <div class="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto pb-4 lg:pb-0">
 
-          <!-- Health score card -->
-          <div class="card p-4 flex flex-col items-center" id="healthCard">
-            <div class="section-label w-full text-center mb-3" style="justify-content:center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-              Connection Health
+          <!-- Connection Health -->
+          <div class="card p-4" id="healthCard" data-section="health">
+            <div class="section-label accordion-toggle">
+              <span class="flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Connection Health
+              </span>
+              <svg class="accordion-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div class="health-ring" id="healthRing">
-              <svg viewBox="0 0 100 100" width="100" height="100">
-                <circle class="ring-bg" cx="50" cy="50" r="42" />
-                <circle class="ring-fg" cx="50" cy="50" r="42"
-                  stroke-dasharray="263.89" stroke-dashoffset="263.89" id="healthArc" />
-              </svg>
-              <div class="health-score-text">
-                <span class="health-score-num" id="healthNum">—</span>
-                <span class="health-score-label">Score</span>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <div class="flex flex-col items-center">
+                  <div class="health-ring" id="healthRing">
+                    <svg viewBox="0 0 100 100" width="100" height="100">
+                      <circle class="ring-bg" cx="50" cy="50" r="42" />
+                      <circle class="ring-fg" cx="50" cy="50" r="42"
+                        stroke-dasharray="263.89" stroke-dashoffset="263.89" id="healthArc" />
+                    </svg>
+                    <div class="health-score-text">
+                      <span class="health-score-num" id="healthNum">—</span>
+                      <span class="health-score-label">Score</span>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-3 w-full mt-4 text-center" id="healthBreakdown">
+                    <div>
+                      <div class="text-xs font-bold" style="color:var(--green)" id="hbLatency">—</div>
+                      <div class="text-[10px] font-medium" style="color:var(--muted)">Latency</div>
+                    </div>
+                    <div>
+                      <div class="text-xs font-bold" style="color:var(--green)" id="hbLoss">—</div>
+                      <div class="text-[10px] font-medium" style="color:var(--muted)">Loss</div>
+                    </div>
+                    <div>
+                      <div class="text-xs font-bold" style="color:var(--green)" id="hbSpeed">—</div>
+                      <div class="text-[10px] font-medium" style="color:var(--muted)">Speed</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="grid grid-cols-3 gap-3 w-full mt-4 text-center" id="healthBreakdown">
-              <div>
-                <div class="text-xs font-bold" style="color:var(--green)" id="hbLatency">—</div>
-                <div class="text-[10px] font-medium" style="color:var(--muted)">Latency</div>
-              </div>
-              <div>
-                <div class="text-xs font-bold" style="color:var(--green)" id="hbLoss">—</div>
-                <div class="text-[10px] font-medium" style="color:var(--muted)">Loss</div>
-              </div>
-              <div>
-                <div class="text-xs font-bold" style="color:var(--green)" id="hbSpeed">—</div>
-                <div class="text-[10px] font-medium" style="color:var(--muted)">Speed</div>
+          </div>
+
+          <!-- Connectivity -->
+          <div class="card p-3" id="connectivityCard" data-section="connectivity">
+            <div class="section-label accordion-toggle">
+              <span class="flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                Connectivity
+              </span>
+              <svg class="accordion-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <table class="target-table" id="targetTable">
+                  <thead>
+                    <tr>
+                      <th>Host</th>
+                      <th>Latency</th>
+                      <th>Loss</th>
+                    </tr>
+                  </thead>
+                  <tbody id="targetBody"></tbody>
+                </table>
               </div>
             </div>
           </div>
 
-          <!-- Targets table -->
-          <div class="card p-3 flex-1 min-h-0 flex flex-col">
-            <div class="section-label">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-              Connectivity
+          <!-- DNS Lookups -->
+          <div class="card p-3" id="dnsCard" data-section="dns">
+            <div class="section-label accordion-toggle">
+              <span class="flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                DNS Lookups
+              </span>
+              <svg class="accordion-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div class="overflow-y-auto flex-1">
-              <table class="target-table" id="targetTable">
-                <thead>
-                  <tr>
-                    <th>Host</th>
-                    <th>Latency</th>
-                    <th>Loss</th>
-                  </tr>
-                </thead>
-                <tbody id="targetBody"></tbody>
-              </table>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <table class="target-table" id="dnsTable">
+                  <thead>
+                    <tr>
+                      <th>Host</th>
+                      <th>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dnsBody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
 
-          <!-- DNS table -->
-          <div class="card p-3 flex flex-col">
-            <div class="section-label">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-              DNS Lookups
+          <!-- Connection info (hidden until data available; adapts to WiFi or Ethernet) -->
+          <div class="card p-3" id="connCard" data-section="conn" style="display:none">
+            <div class="section-label accordion-toggle">
+              <span class="flex items-center gap-1.5">
+                <!-- WiFi icon -->
+                <span id="conn-icon-wifi"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/></svg></span>
+                <!-- Ethernet icon -->
+                <span id="conn-icon-eth" style="display:none"><svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg></span>
+                <span id="conn-section-title">Connection</span>
+              </span>
+              <svg class="accordion-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <table class="target-table" id="dnsTable">
-              <thead>
-                <tr>
-                  <th>Host</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
-              <tbody id="dnsBody"></tbody>
-            </table>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <!-- WiFi details -->
+                <div id="conn-wifi-details" class="flex flex-col gap-1.5 text-xs" style="display:none">
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Signal (RSSI)</span>
+                    <span class="font-bold" id="wifi-rssi">—</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">SNR</span>
+                    <span class="font-bold" id="wifi-snr">—</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Band · Channel</span>
+                    <span class="font-bold" id="wifi-band-ch">—</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Link Rate</span>
+                    <span class="font-bold" id="wifi-link-rate">—</span>
+                  </div>
+                  <div style="height:1px;background:var(--border);margin:0.25rem 0"></div>
+                  <div class="flex items-center gap-2">
+                    <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+                      <div id="wifi-signal-bar" style="height:100%;border-radius:2px;transition:width 0.5s ease;width:0%"></div>
+                    </div>
+                    <span id="wifi-quality-label" style="font-size:10px;min-width:52px;text-align:right">—</span>
+                  </div>
+                </div>
+                <!-- Ethernet details -->
+                <div id="conn-eth-details" class="flex flex-col gap-1.5 text-xs" style="display:none">
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Link Speed</span>
+                    <span class="font-bold" id="eth-link-speed">—</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Duplex</span>
+                    <span class="font-bold" id="eth-duplex">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Quick stats footer -->
-          <div class="card p-3 flex-shrink-0">
-            <div class="section-label mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              24h Summary
+          <!-- 24h Summary -->
+          <div class="card p-3" id="summaryCard" data-section="summary">
+            <div class="section-label accordion-toggle">
+              <span class="flex items-center gap-1.5">
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                24h Summary
+              </span>
+              <svg class="accordion-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
             </div>
-            <div class="flex flex-col gap-1.5 text-xs">
-              <div class="flex justify-between items-center">
-                <span style="color:var(--muted)">Uptime</span>
-                <span class="font-bold" id="qs-uptime">—</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span style="color:var(--muted)">Outages</span>
-                <span class="font-bold" id="qs-outages">—</span>
-              </div>
-              <div style="height:1px;background:var(--border);margin:0.25rem 0"></div>
-              <div class="flex justify-between items-center">
-                <span style="color:var(--muted)">Peak Download</span>
-                <span class="font-bold" id="qs-peak-dl">—</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span style="color:var(--muted)">Min Latency</span>
-                <span class="font-bold" id="qs-min-lat">—</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span style="color:var(--muted)">Max Latency</span>
-                <span class="font-bold" id="qs-max-lat">—</span>
-              </div>
-              <div class="flex justify-between items-center">
-                <span style="color:var(--muted)">Avg Jitter</span>
-                <span class="font-bold" id="qs-jitter">—</span>
+            <div class="accordion-body">
+              <div class="accordion-body-inner">
+                <div class="flex flex-col gap-1.5 text-xs">
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Uptime</span>
+                    <span class="font-bold" id="qs-uptime">—</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Outages</span>
+                    <span class="font-bold" id="qs-outages">—</span>
+                  </div>
+                  <div style="height:1px;background:var(--border);margin:0.25rem 0"></div>
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Peak Download</span>
+                    <span class="font-bold" id="qs-peak-dl">—</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Min Latency</span>
+                    <span class="font-bold" id="qs-min-lat">—</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Max Latency</span>
+                    <span class="font-bold" id="qs-max-lat">—</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span style="color:var(--muted)">Avg Jitter</span>
+                    <span class="font-bold" id="qs-jitter">—</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
