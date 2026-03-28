@@ -2,14 +2,47 @@ package store
 
 import (
 	"database/sql"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
+
+//go:embed schema.sql
+var schemaSQL string
+
+//go:embed queries.sql
+var queriesRaw string
+
+// q holds all named queries parsed from queries.sql.
+var q = parseQueries(queriesRaw)
+
+// parseQueries splits queries.sql into a map keyed by "-- name: <key>" markers.
+func parseQueries(data string) map[string]string {
+	result := make(map[string]string)
+	var name string
+	var lines []string
+	for _, line := range strings.Split(data, "\n") {
+		if trimmed := strings.TrimSpace(line); strings.HasPrefix(trimmed, "-- name:") {
+			if name != "" {
+				result[name] = strings.TrimSpace(strings.Join(lines, "\n"))
+			}
+			name = strings.TrimSpace(strings.TrimPrefix(trimmed, "-- name:"))
+			lines = nil
+		} else if name != "" {
+			lines = append(lines, line)
+		}
+	}
+	if name != "" {
+		result[name] = strings.TrimSpace(strings.Join(lines, "\n"))
+	}
+	return result
+}
 
 type Store struct {
 	db *sql.DB
@@ -34,68 +67,11 @@ func New(path string) (*Store, error) {
 }
 
 func (s *Store) migrate() error {
-	_, err := s.db.Exec(`
-		CREATE TABLE IF NOT EXISTS measurements (
-			id            INTEGER PRIMARY KEY AUTOINCREMENT,
-			ts            TEXT    NOT NULL,
-			network_id    TEXT    NOT NULL DEFAULT '',
-			latency       REAL    NOT NULL DEFAULT 0,
-			jitter        REAL    NOT NULL DEFAULT 0,
-			packet_loss   REAL    NOT NULL DEFAULT 0,
-			download      REAL    NOT NULL DEFAULT 0,
-			upload        REAL    NOT NULL DEFAULT 0,
-			dns           REAL    NOT NULL DEFAULT 0,
-			conn_type     TEXT    NOT NULL DEFAULT '',
-			conn_rssi     INTEGER NOT NULL DEFAULT 0,
-			conn_noise    INTEGER NOT NULL DEFAULT 0,
-			conn_snr      INTEGER NOT NULL DEFAULT 0,
-			conn_channel  INTEGER NOT NULL DEFAULT 0,
-			conn_band     TEXT    NOT NULL DEFAULT '',
-			conn_link_rate INTEGER NOT NULL DEFAULT 0,
-			conn_duplex   TEXT    NOT NULL DEFAULT ''
-		);
-
-		CREATE TABLE IF NOT EXISTS ping_targets (
-			id         INTEGER PRIMARY KEY AUTOINCREMENT,
-			host       TEXT NOT NULL UNIQUE,
-			ip         TEXT NOT NULL DEFAULT '',
-			latency    REAL NOT NULL DEFAULT 0,
-			loss       REAL NOT NULL DEFAULT 0,
-			status     TEXT NOT NULL DEFAULT 'unknown',
-			updated_at TEXT NOT NULL
-		);
-
-		CREATE TABLE IF NOT EXISTS dns_checks (
-			id         INTEGER PRIMARY KEY AUTOINCREMENT,
-			host       TEXT NOT NULL UNIQUE,
-			time_ms    REAL NOT NULL DEFAULT 0,
-			resolver   TEXT NOT NULL DEFAULT 'system',
-			updated_at TEXT NOT NULL
-		);
-
-		CREATE TABLE IF NOT EXISTS network_events (
-			id         INTEGER PRIMARY KEY AUTOINCREMENT,
-			ts         TEXT NOT NULL,
-			network_id TEXT NOT NULL DEFAULT '',
-			ssid       TEXT NOT NULL DEFAULT '',
-			gateway    TEXT NOT NULL DEFAULT ''
-		);
-
-		CREATE TABLE IF NOT EXISTS settings (
-			key   TEXT PRIMARY KEY,
-			value TEXT NOT NULL DEFAULT ''
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_measurements_ts ON measurements(ts);
-		CREATE INDEX IF NOT EXISTS idx_network_events_ts ON network_events(ts);
-	`)
-	if err != nil {
+	if _, err := s.db.Exec(schemaSQL); err != nil {
 		return err
 	}
-
 	// Add network_id to measurements table for pre-WiFi databases (no-op if already exists).
 	s.db.Exec(`ALTER TABLE measurements ADD COLUMN network_id TEXT NOT NULL DEFAULT ''`)
-
 	return nil
 }
 
@@ -126,11 +102,7 @@ type Measurement struct {
 }
 
 func (s *Store) SaveMeasurement(m Measurement) error {
-	_, err := s.db.Exec(
-		`INSERT INTO measurements
-		 (ts, network_id, latency, jitter, packet_loss, download, upload, dns,
-		  conn_type, conn_rssi, conn_noise, conn_snr, conn_channel, conn_band, conn_link_rate, conn_duplex)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+	_, err := s.db.Exec(q["insert_measurement"],
 		m.Time, m.NetworkID, m.Latency, m.Jitter, m.PacketLoss, m.Download, m.Upload, m.DNS,
 		m.ConnType, m.ConnRSSI, m.ConnNoise, m.ConnSNR, m.ConnChannel, m.ConnBand, m.ConnLinkRate, m.ConnDuplex,
 	)
@@ -138,11 +110,7 @@ func (s *Store) SaveMeasurement(m Measurement) error {
 }
 
 func (s *Store) GetHistory(limit int) ([]Measurement, error) {
-	rows, err := s.db.Query(
-		`SELECT id, ts, network_id, latency, jitter, packet_loss, download, upload, dns,
-		        conn_type, conn_rssi, conn_noise, conn_snr, conn_channel, conn_band, conn_link_rate, conn_duplex
-		 FROM measurements ORDER BY ts DESC LIMIT ?`, limit,
-	)
+	rows, err := s.db.Query(q["get_history"], limit)
 	if err != nil {
 		return nil, err
 	}
@@ -175,11 +143,7 @@ func (s *Store) GetHistory(limit int) ([]Measurement, error) {
 
 func (s *Store) GetHistoryWindow(minutes int) ([]Measurement, error) {
 	cutoff := time.Now().Add(-time.Duration(minutes) * time.Minute).Format(time.RFC3339)
-	rows, err := s.db.Query(
-		`SELECT id, ts, network_id, latency, jitter, packet_loss, download, upload, dns,
-		        conn_type, conn_rssi, conn_noise, conn_snr, conn_channel, conn_band, conn_link_rate, conn_duplex
-		 FROM measurements WHERE ts >= ? ORDER BY ts ASC`, cutoff,
-	)
+	rows, err := s.db.Query(q["get_history_window"], cutoff)
 	if err != nil {
 		return nil, err
 	}
@@ -236,18 +200,7 @@ func (s *Store) GetSummary() (Summary, error) {
 	var sum Summary
 	cutoff := time.Now().Add(-24 * time.Hour).Format(time.RFC3339)
 
-	err := s.db.QueryRow(`
-		SELECT
-			COALESCE(AVG(latency), 0),
-			COALESCE(MIN(latency), 0),
-			COALESCE(MAX(latency), 0),
-			COALESCE(AVG(jitter), 0),
-			COALESCE(AVG(packet_loss), 0),
-			COALESCE(AVG(dns), 0),
-			COALESCE(AVG(download), 0),
-			COALESCE(AVG(upload), 0)
-		FROM measurements WHERE ts >= ?
-	`, cutoff).Scan(
+	err := s.db.QueryRow(q["get_summary_stats"], cutoff).Scan(
 		&sum.LatencyAvg, &sum.LatencyMin, &sum.LatencyMax,
 		&sum.JitterAvg, &sum.PacketLoss, &sum.DNSAvg,
 		&sum.DownloadAvg, &sum.UploadAvg,
@@ -265,9 +218,7 @@ func (s *Store) GetSummary() (Summary, error) {
 	sum.DownloadAvg = round1(sum.DownloadAvg)
 	sum.UploadAvg = round1(sum.UploadAvg)
 
-	rows, err := s.db.Query(
-		`SELECT latency FROM measurements WHERE ts >= ? ORDER BY latency`, cutoff,
-	)
+	rows, err := s.db.Query(q["get_latencies"], cutoff)
 	if err == nil {
 		defer rows.Close()
 		var latencies []float64
@@ -286,17 +237,15 @@ func (s *Store) GetSummary() (Summary, error) {
 	}
 
 	var total, up int
-	s.db.QueryRow(`SELECT COUNT(*) FROM measurements WHERE ts >= ?`, cutoff).Scan(&total)
-	s.db.QueryRow(`SELECT COUNT(*) FROM measurements WHERE ts >= ? AND packet_loss < 100`, cutoff).Scan(&up)
+	s.db.QueryRow(q["count_measurements"], cutoff).Scan(&total)
+	s.db.QueryRow(q["count_up_measurements"], cutoff).Scan(&up)
 	if total > 0 {
 		sum.Uptime24h = math.Round(float64(up)/float64(total)*10000) / 100
 	} else {
 		sum.Uptime24h = 100
 	}
 
-	s.db.QueryRow(
-		`SELECT COUNT(*) FROM measurements WHERE ts >= ? AND packet_loss >= 50`, cutoff,
-	).Scan(&sum.Outages24h)
+	s.db.QueryRow(q["count_outages"], cutoff).Scan(&sum.Outages24h)
 
 	return sum, nil
 }
@@ -312,21 +261,13 @@ type PingTarget struct {
 }
 
 func (s *Store) UpsertPingTarget(t PingTarget) error {
-	_, err := s.db.Exec(`
-		INSERT INTO ping_targets (host, ip, latency, loss, status, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-		ON CONFLICT(host) DO UPDATE SET
-			ip = excluded.ip,
-			latency = excluded.latency,
-			loss = excluded.loss,
-			status = excluded.status,
-			updated_at = excluded.updated_at
-	`, t.Host, t.IP, t.Latency, t.Loss, t.Status, time.Now().Format(time.RFC3339))
+	_, err := s.db.Exec(q["upsert_ping_target"],
+		t.Host, t.IP, t.Latency, t.Loss, t.Status, time.Now().Format(time.RFC3339))
 	return err
 }
 
 func (s *Store) GetPingTargets() ([]PingTarget, error) {
-	rows, err := s.db.Query(`SELECT host, ip, latency, loss, status FROM ping_targets ORDER BY host`)
+	rows, err := s.db.Query(q["get_ping_targets"])
 	if err != nil {
 		return nil, err
 	}
@@ -352,19 +293,13 @@ type DNSCheck struct {
 }
 
 func (s *Store) UpsertDNSCheck(d DNSCheck) error {
-	_, err := s.db.Exec(`
-		INSERT INTO dns_checks (host, time_ms, resolver, updated_at)
-		VALUES (?, ?, ?, ?)
-		ON CONFLICT(host) DO UPDATE SET
-			time_ms = excluded.time_ms,
-			resolver = excluded.resolver,
-			updated_at = excluded.updated_at
-	`, d.Host, d.TimeMs, d.Resolver, time.Now().Format(time.RFC3339))
+	_, err := s.db.Exec(q["upsert_dns_check"],
+		d.Host, d.TimeMs, d.Resolver, time.Now().Format(time.RFC3339))
 	return err
 }
 
 func (s *Store) GetDNSChecks() ([]DNSCheck, error) {
-	rows, err := s.db.Query(`SELECT host, time_ms, resolver FROM dns_checks ORDER BY host`)
+	rows, err := s.db.Query(q["get_dns_checks"])
 	if err != nil {
 		return nil, err
 	}
@@ -392,17 +327,13 @@ type NetworkEvent struct {
 }
 
 func (s *Store) LogNetworkEvent(e NetworkEvent) error {
-	_, err := s.db.Exec(
-		`INSERT INTO network_events (ts, network_id, ssid, gateway) VALUES (?, ?, ?, ?)`,
-		e.Time, e.Network, e.SSID, e.Gateway,
-	)
+	_, err := s.db.Exec(q["log_network_event"], e.Time, e.Network, e.SSID, e.Gateway)
 	return err
 }
 
-// GetCurrentNetworkID returns the network_id from the most recent network event.
 func (s *Store) GetCurrentNetworkID() string {
 	var id string
-	s.db.QueryRow(`SELECT network_id FROM network_events ORDER BY ts DESC LIMIT 1`).Scan(&id)
+	s.db.QueryRow(q["get_current_network_id"]).Scan(&id)
 	return id
 }
 
@@ -419,7 +350,7 @@ type ConfigSettings struct {
 
 func (s *Store) GetConfig() (ConfigSettings, error) {
 	var raw string
-	err := s.db.QueryRow(`SELECT value FROM settings WHERE key = 'config'`).Scan(&raw)
+	err := s.db.QueryRow(q["get_config"]).Scan(&raw)
 	if err == sql.ErrNoRows {
 		return ConfigSettings{}, sql.ErrNoRows
 	}
@@ -435,11 +366,7 @@ func (s *Store) SaveConfig(cs ConfigSettings) error {
 	if err != nil {
 		return err
 	}
-	_, err = s.db.Exec(
-		`INSERT INTO settings (key, value) VALUES ('config', ?)
-		 ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
-		string(b),
-	)
+	_, err = s.db.Exec(q["save_config"], string(b))
 	return err
 }
 
