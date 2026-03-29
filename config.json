@@ -2,7 +2,7 @@
   "ping_targets": ["google.com", "cloudflare.com"],
   "dns_targets": ["google.com", "cloudflare.com"],
   "ping_interval_s": 60,
-  "speed_interval_m": 30,
+  "speed_interval_m": 5,
   "ping_count": 5,
   "download_url": "https://speed.cloudflare.com/__down?bytes=1000000",
   "upload_url": "https://speed.cloudflare.com/__up"
