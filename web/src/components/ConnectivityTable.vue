@@ -5,10 +5,10 @@
     </thead>
     <tbody>
       <tr v-if="!targets?.length">
-        <td colspan="3" class="text-center py-5" style="color:var(--muted);border-bottom:none">
-          <div class="flex flex-col items-center gap-1.5">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.45"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-            <span style="font-size:0.6875rem;font-weight:600;opacity:0.6">No targets yet</span>
+        <td colspan="3" style="border-bottom:none">
+          <div class="card-empty">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            <span>No targets yet</span>
           </div>
         </td>
       </tr>
@@ -21,7 +21,7 @@
           <div class="ip-cell">{{ t.ip }}</div>
         </td>
         <td class="font-semibold">{{ t.latency }} ms</td>
-        <td>{{ t.loss }}%</td>
+        <td class="font-semibold">{{ t.loss }}%</td>
       </tr>
     </tbody>
   </table>

@@ -1,35 +1,41 @@
 <template>
   <div class="flex flex-col items-center">
-    <div class="health-ring">
-      <svg viewBox="0 0 100 100" width="100" height="100">
-        <circle class="ring-bg" cx="50" cy="50" r="42" />
-        <circle
-          class="ring-fg"
-          cx="50" cy="50" r="42"
-          stroke-dasharray="263.89"
-          :stroke-dashoffset="dashOffset"
-          :style="{ stroke: color }"
-        />
-      </svg>
-      <div class="health-score-text">
-        <span class="health-score-num" :style="{ color }">{{ summary ? score : '—' }}</span>
-        <span class="health-score-label">Score</span>
-      </div>
+    <div v-if="!summary" class="card-empty">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <span>No data yet</span>
     </div>
-    <div class="grid grid-cols-3 gap-3 w-full mt-4 text-center">
-      <div>
-        <div class="text-xs font-bold" :style="{ color: lat?.color }">{{ lat?.text ?? '—' }}</div>
-        <div class="text-[10px] font-medium" style="color:var(--muted)">Latency</div>
+
+    <template v-else>
+      <div class="health-ring">
+        <svg viewBox="0 0 100 100" width="100" height="100">
+          <circle class="ring-bg" cx="50" cy="50" r="42" />
+          <circle class="ring-fg" cx="50" cy="50" r="42"
+            stroke-dasharray="263.89"
+            :stroke-dashoffset="dashOffset"
+            :style="{ stroke: color }"
+          />
+        </svg>
+        <div class="health-score-text">
+          <span class="health-score-num" :style="{ color }">{{ score }}</span>
+          <span class="health-score-label">Score</span>
+        </div>
       </div>
-      <div>
-        <div class="text-xs font-bold" :style="{ color: loss?.color }">{{ loss?.text ?? '—' }}</div>
-        <div class="text-[10px] font-medium" style="color:var(--muted)">Loss</div>
+
+      <div class="grid grid-cols-3 gap-2 w-full mt-3">
+        <div class="flex flex-col items-center gap-0.5">
+          <span class="health-metric-value" :style="{ color: lat?.color }">{{ lat?.text ?? '—' }}</span>
+          <span class="health-metric-label">Latency</span>
+        </div>
+        <div class="flex flex-col items-center gap-0.5">
+          <span class="health-metric-value" :style="{ color: loss?.color }">{{ loss?.text ?? '—' }}</span>
+          <span class="health-metric-label">Loss</span>
+        </div>
+        <div class="flex flex-col items-center gap-0.5">
+          <span class="health-metric-value" :style="{ color: spd?.color }">{{ spd?.text ?? '—' }}</span>
+          <span class="health-metric-label">Speed</span>
+        </div>
       </div>
-      <div>
-        <div class="text-xs font-bold" :style="{ color: spd?.color }">{{ spd?.text ?? '—' }}</div>
-        <div class="text-[10px] font-medium" style="color:var(--muted)">Speed</div>
-      </div>
-    </div>
+    </template>
   </div>
 </template>
 

@@ -43,7 +43,7 @@
         <!-- Right sidebar -->
         <div class="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto pb-4 lg:pb-0">
 
-          <AccordionCard section="health" padding="p-4">
+          <AccordionCard section="health" padding="p-3">
             <template #title>
               <span class="flex items-center gap-1.5">
                 <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -222,12 +222,12 @@ const metricCards = computed(() => {
     { label: 'Avg Latency', value: '—', icon: ICONS.clock,     color: 'blue',   sub: 'waiting for data', spark: null },
     { label: 'Download',    value: '—', icon: ICONS.arrowDown, color: 'green',  sub: 'waiting for data', spark: null },
     { label: 'Upload',      value: '—', icon: ICONS.arrowUp,   color: 'purple', sub: 'waiting for data', spark: null },
-    { label: 'Packet Loss', value: '—', icon: ICONS.activity,  color: 'blue',   sub: 'waiting for data', spark: null },
+    { label: 'Packet Loss', value: '—', icon: ICONS.activity,  color: 'yellow', sub: 'waiting for data', spark: null },
   ]
   const s  = summary.value
   const l20 = history.value.slice(-20)
-  const lc  = s.packet_loss > 1 ? 'red' : 'green'
-  const C   = { blue: '#3b82f6', green: '#10b981', purple: '#8b5cf6', red: '#ef4444' }
+  const lc  = s.packet_loss > 1 ? 'red' : 'yellow'
+  const C   = { blue: '#3b82f6', green: '#10b981', purple: '#8b5cf6', red: '#ef4444', yellow: '#f59e0b' }
   return [
     { label: 'Avg Latency', value: s.latency_avg  + ' ms',   icon: ICONS.clock,     color: 'blue',   sub: 'p95 ' + s.latency_p95 + ' ms',            spark: sparklineSVG(l20.map(h => h.latency),  C.blue)   },
     { label: 'Download',    value: s.download_avg + ' Mbps', icon: ICONS.arrowDown, color: 'green',  sub: 'avg throughput',                           spark: sparklineSVG(l20.map(h => h.download), C.green)  },

@@ -232,10 +232,9 @@ body { background: var(--bg); color: var(--fg); margin: 0; }
   flex-direction: column; align-items: center; justify-content: center;
 }
 .health-score-num   { font-size: 1.5rem; font-weight: 800; line-height: 1; }
-.health-score-label {
-  font-size: 0.5625rem; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.06em; color: var(--muted); margin-top: 2px;
-}
+.health-score-label { font-size: 0.5625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-top: 3px; }
+.health-metric-value { font-size: 0.75rem; font-weight: 700; line-height: 1.2; }
+.health-metric-label { font-size: 0.625rem; font-weight: 500; color: var(--muted); }
 
 .section-label {
   font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
@@ -369,6 +368,21 @@ textarea.field-input { resize: none; }
 .save-status     { font-size: 0.75rem; font-weight: 600; }
 .save-status.ok  { color: var(--green); }
 .save-status.err { color: var(--red); }
+
+/* Sidebar card shared patterns */
+.card-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.75rem;
+}
+.card-row-label { color: var(--muted); font-weight: 500; }
+.card-row-value { font-weight: 600; }
+.card-divider { height: 1px; background: var(--border); margin: 0.25rem 0; }
+.card-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 1rem 0; color: var(--muted);
+}
+.card-empty svg { opacity: 0.4; }
+.card-empty span { font-size: 0.6875rem; font-weight: 600; opacity: 0.6; }
 
 /* Accordion */
 .accordion-toggle {
