@@ -33,10 +33,10 @@
 
           <!-- Charts 2×2 — :key forces full remount on theme/resize -->
           <div id="chartGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3 lg:flex-1 lg:min-h-0">
-            <ChartPanel :key="'lat-' + chartKey" :config="chartConfigs.latency" :label="chartLabels.latency" title="Latency"               dot="var(--accent)"  label-id="latencyChart" />
-            <ChartPanel :key="'spd-' + chartKey" :config="chartConfigs.speed"   :label="chartLabels.speed"   title="Throughput"            dot="var(--green)"   label-id="speedChart"   />
-            <ChartPanel :key="'los-' + chartKey" :config="chartConfigs.loss"    :label="chartLabels.loss"    title="Packet Loss &amp; Jitter" dot="var(--red)"  label-id="lossChart"    />
-            <ChartPanel :key="'dns-' + chartKey" :config="chartConfigs.dns"     :label="chartLabels.dns"     title="DNS Resolution"        dot="var(--purple)"  label-id="dnsChart"     />
+            <ChartPanel :key="'lat-' + chartKey" :config="chartConfigs.latency" :label="chartLabels.latency" title="Latency"               dot="var(--accent)"  label-id="latencyChart" :icon="CHART_ICONS.latency" />
+            <ChartPanel :key="'spd-' + chartKey" :config="chartConfigs.speed"   :label="chartLabels.speed"   title="Throughput"            dot="var(--green)"   label-id="speedChart"   :icon="CHART_ICONS.speed"   />
+            <ChartPanel :key="'los-' + chartKey" :config="chartConfigs.loss"    :label="chartLabels.loss"    title="Packet Loss &amp; Jitter" dot="var(--red)"  label-id="lossChart"    :icon="CHART_ICONS.loss"    />
+            <ChartPanel :key="'dns-' + chartKey" :config="chartConfigs.dns"     :label="chartLabels.dns"     title="DNS Resolution"        dot="var(--purple)"  label-id="dnsChart"     :icon="CHART_ICONS.dns"    />
           </div>
         </div>
 
@@ -210,6 +210,14 @@ const statusBadge = computed(() => {
 })
 
 // ── Computed: metric cards ────────────────────────────────────────────────
+const SVG = (d) => `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`
+const CHART_ICONS = {
+  latency: SVG('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>'),
+  speed:   SVG('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
+  loss:    SVG('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'),
+  dns:     SVG('<rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/>'),
+}
+
 const ICONS = {
   clock:     `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
   arrowDown: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`,
@@ -297,10 +305,10 @@ const chartLabels = computed(() => {
   if (!summary.value) return { latency: '—', speed: '—', loss: '—', dns: '—' }
   const s = summary.value
   return {
-    latency: 'avg ' + s.latency_avg + ' ms',
-    speed:   '↓' + s.download_avg + '  ↑' + s.upload_avg + ' Mbps',
-    loss:    'loss ' + s.packet_loss + '% · jitter ' + s.jitter_avg + ' ms',
-    dns:     'avg ' + s.dns_avg + ' ms',
+    latency: s.latency_avg + ' ms',
+    speed:   '↓ ' + s.download_avg + '  ↑ ' + s.upload_avg + ' Mbps',
+    loss:    s.packet_loss + '% · ' + s.jitter_avg + ' ms',
+    dns:     s.dns_avg + ' ms',
   }
 })
 </script>

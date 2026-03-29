@@ -5,7 +5,10 @@
         <span class="chart-dot" :style="{ background: dot }" />
         {{ title }}
       </h3>
-      <span class="text-xs font-medium" style="color:var(--muted)">{{ label }}</span>
+      <div v-if="label || icon" class="chart-badge" :style="{ color: dot }">
+        <span v-if="icon" class="chart-badge-icon" v-html="icon" />
+        <span>{{ label }}</span>
+      </div>
     </div>
     <div :id="labelId" ref="chartEl" style="height:100%" />
   </div>
@@ -21,6 +24,7 @@ const props = defineProps({
   title:  { type: String, required: true },
   dot:    { type: String, required: true },
   labelId:{ type: String, required: true },
+  icon:   { type: String, default: '' },
 })
 
 const chartEl = ref(null)
