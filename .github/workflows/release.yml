@@ -24,6 +24,17 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build frontend
+        run: npm ci && npm run build
+        working-directory: web
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 

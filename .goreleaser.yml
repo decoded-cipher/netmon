@@ -3,8 +3,6 @@ version: 2
 before:
   hooks:
     - go mod tidy
-    - cd web && npm ci
-    - cd web && npm run build
 
 builds:
   - id: netmon
