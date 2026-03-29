@@ -9,6 +9,7 @@
       :is-refreshing="isLoading"
       :is-dark="isDark"
       :current-minutes="currentMinutes"
+      :conn-type="connType"
       @toggle-theme="$emit('toggle-theme')"
       @open-settings="settingsOpen = true"
     >
@@ -207,6 +208,10 @@ const networkLabel = computed(() => {
 const statusBadge = computed(() => {
   const loss = summary.value?.packet_loss ?? 0
   return loss > 5 ? 'offline' : loss > 1 ? 'degraded' : 'online'
+})
+const connType = computed(() => {
+  const latest = history.value[history.value.length - 1]
+  return latest?.conn_type ?? ''
 })
 
 // ── Computed: metric cards ────────────────────────────────────────────────
