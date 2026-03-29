@@ -15,14 +15,15 @@
             {{ status.charAt(0).toUpperCase() + status.slice(1) }}
           </span>
         </div>
-        <p class="text-xs mt-0.5 flex items-center gap-1 truncate" style="color:var(--subtle)">
+        <p class="text-xs mt-0.5 flex items-center gap-1.5 truncate" style="color:var(--subtle)">
           <span class="live-dot flex-shrink-0" />
           <span class="font-semibold flex-shrink-0" style="color:var(--fg)">{{ targetCount }}</span>
-          <span class="flex-shrink-0">probes ·</span>
+          <span class="flex-shrink-0">probes</span>
+          <span class="flex-shrink-0" style="color:var(--border)">·</span>
           <span class="flex-shrink-0" :class="{ refreshing: isRefreshing }" style="color:var(--muted)">
             {{ isRefreshing ? 'Refreshing…' : agoLabel }}
           </span>
-          <span class="hidden sm:inline flex-shrink-0"> · </span>
+          <span class="hidden sm:inline flex-shrink-0" style="color:var(--border)">·</span>
           <span class="font-semibold hidden sm:inline flex-shrink-0" style="color:var(--accent)">{{ networkLabel }}</span>
         </p>
       </div>

@@ -202,8 +202,9 @@ const dns         = computed(() => apiData.value?.dns || [])
 const networkId   = computed(() => apiData.value?.network_id || 'unknown')
 const targetCount = computed(() => apiConfig.value ? apiConfig.value.ping_targets.length : targets.value.length)
 const networkLabel = computed(() => {
-  const interval = apiConfig.value ? ` · ping ${apiConfig.value.ping_interval_s}s` : ''
-  return networkId.value + interval
+  const id = networkId.value.replace(/^gw:/, 'Gateway ')
+  const interval = apiConfig.value ? ` · Ping every ${apiConfig.value.ping_interval_s}s` : ''
+  return id + interval
 })
 const statusBadge = computed(() => {
   const loss = summary.value?.packet_loss ?? 0
