@@ -7,7 +7,7 @@
       </h3>
       <span class="text-xs font-medium" style="color:var(--muted)">{{ label }}</span>
     </div>
-    <div :id="labelId" ref="chartEl" />
+    <div :id="labelId" ref="chartEl" style="height:100%" />
   </div>
 </template>
 

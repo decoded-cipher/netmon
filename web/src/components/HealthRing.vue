@@ -12,7 +12,7 @@
         />
       </svg>
       <div class="health-score-text">
-        <span class="health-score-num" :style="{ color }">{{ score }}</span>
+        <span class="health-score-num" :style="{ color }">{{ summary ? score : '—' }}</span>
         <span class="health-score-label">Score</span>
       </div>
     </div>
@@ -42,7 +42,10 @@ const props = defineProps({ summary: Object })
 const CIRC = 2 * Math.PI * 42
 
 const score = computed(() => props.summary ? computeHealth(props.summary) : 0)
-const color = computed(() => score.value >= 80 ? 'var(--green)' : score.value >= 50 ? 'var(--yellow)' : 'var(--red)')
+const color = computed(() => {
+  if (!props.summary) return 'var(--border)'
+  return score.value >= 80 ? 'var(--green)' : score.value >= 50 ? 'var(--yellow)' : 'var(--red)'
+})
 const dashOffset = computed(() => CIRC - (score.value / 100) * CIRC)
 
 const lat  = computed(() => props.summary ? rateMetric(props.summary.latency_avg, 20, 50) : null)

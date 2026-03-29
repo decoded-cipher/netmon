@@ -33,12 +33,10 @@
 
           <!-- Charts 2×2 — :key forces full remount on theme/resize -->
           <div id="chartGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3 lg:flex-1 lg:min-h-0">
-            <template v-if="chartConfigs">
-              <ChartPanel :key="'lat-' + chartKey" :config="chartConfigs.latency" :label="chartLabels.latency" title="Latency"               dot="var(--accent)"  label-id="latencyChart" />
-              <ChartPanel :key="'spd-' + chartKey" :config="chartConfigs.speed"   :label="chartLabels.speed"   title="Throughput"            dot="var(--green)"   label-id="speedChart"   />
-              <ChartPanel :key="'los-' + chartKey" :config="chartConfigs.loss"    :label="chartLabels.loss"    title="Packet Loss &amp; Jitter" dot="var(--red)"  label-id="lossChart"    />
-              <ChartPanel :key="'dns-' + chartKey" :config="chartConfigs.dns"     :label="chartLabels.dns"     title="DNS Resolution"        dot="var(--purple)"  label-id="dnsChart"     />
-            </template>
+            <ChartPanel :key="'lat-' + chartKey" :config="chartConfigs.latency" :label="chartLabels.latency" title="Latency"               dot="var(--accent)"  label-id="latencyChart" />
+            <ChartPanel :key="'spd-' + chartKey" :config="chartConfigs.speed"   :label="chartLabels.speed"   title="Throughput"            dot="var(--green)"   label-id="speedChart"   />
+            <ChartPanel :key="'los-' + chartKey" :config="chartConfigs.loss"    :label="chartLabels.loss"    title="Packet Loss &amp; Jitter" dot="var(--red)"  label-id="lossChart"    />
+            <ChartPanel :key="'dns-' + chartKey" :config="chartConfigs.dns"     :label="chartLabels.dns"     title="DNS Resolution"        dot="var(--purple)"  label-id="dnsChart"     />
           </div>
         </div>
 
@@ -220,7 +218,12 @@ const ICONS = {
 }
 
 const metricCards = computed(() => {
-  if (!summary.value) return []
+  if (!summary.value) return [
+    { label: 'Avg Latency', value: '—', icon: ICONS.clock,     color: 'blue',   sub: 'waiting for data', spark: null },
+    { label: 'Download',    value: '—', icon: ICONS.arrowDown, color: 'green',  sub: 'waiting for data', spark: null },
+    { label: 'Upload',      value: '—', icon: ICONS.arrowUp,   color: 'purple', sub: 'waiting for data', spark: null },
+    { label: 'Packet Loss', value: '—', icon: ICONS.activity,  color: 'blue',   sub: 'waiting for data', spark: null },
+  ]
   const s  = summary.value
   const l20 = history.value.slice(-20)
   const lc  = s.packet_loss > 1 ? 'red' : 'green'
@@ -234,51 +237,59 @@ const metricCards = computed(() => {
 })
 
 // ── Computed: charts ──────────────────────────────────────────────────────
-function getChartHeight() {
+function getChartHeight(hasData) {
   if (window.innerWidth >= 1024) {
+    if (!hasData) return '100%'
     const grid = document.getElementById('chartGrid')
     if (grid && grid.offsetHeight > 0)
       return Math.max(80, Math.floor((grid.offsetHeight - 12) / 2) - 52)
+    return '100%'
   }
   return window.innerWidth < 640 ? 160 : 185
 }
 
 const chartConfigs = computed(() => {
-  if (!history.value.length) return null
   const h      = history.value
   const times  = h.map(x => x.time)
   const isSmall = window.innerWidth < 640
-  const chartH  = getChartHeight()
+  const chartH  = getChartHeight(h.length > 0)
   const tick    = Math.min(times.length, isSmall ? 4 : 6)
   const ls      = { colors: 'var(--muted)', fontSize: isSmall ? '9px' : '10px' }
   const dark    = props.isDark
 
+  const noData = {
+    text: 'Waiting for data…',
+    align: 'center', verticalAlign: 'middle',
+    style: { color: dark ? '#7b8ba4' : '#9ca3af', fontSize: '12px', fontFamily: "'Inter',sans-serif" },
+  }
+
   const base = {
     chart: { type: 'area', background: 'transparent', fontFamily: "'Inter',sans-serif", toolbar: { show: false }, height: chartH, animations: { speed: 500 }, zoom: { enabled: false } },
     stroke: { curve: 'smooth', width: 2 },
-    markers: { size: times.length <= 5 ? 4 : 0, hover: { size: 5 } },
-    grid: { borderColor: 'var(--border)', xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: -8, right: 8, bottom: 0, left: 8 } },
-    xaxis: { categories: times, tickAmount: tick, labels: { style: ls, rotate: 0, hideOverlappingLabels: true, maxHeight: 30 }, axisBorder: { show: false }, axisTicks: { show: false } },
-    yaxis: { labels: { style: ls }, forceNiceScale: true },
+    markers: { size: times.length > 0 && times.length <= 5 ? 4 : 0, hover: { size: 5 } },
+    grid: { borderColor: 'var(--border)', strokeDashArray: 4, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: -8, right: 0, bottom: 0, left: 13.5 } },
+    xaxis: { categories: times, tickAmount: tick, labels: { style: ls, rotate: 0, hideOverlappingLabels: true, maxHeight: 30 }, axisBorder: { show: true, color: 'var(--border)' }, axisTicks: { show: false } },
+    yaxis: { labels: { style: ls }, forceNiceScale: true, axisBorder: { show: true, color: 'var(--border)' }, axisTicks: { show: false } },
     legend: { position: 'top', fontSize: '10px', labels: { colors: 'var(--subtle)' }, markers: { width: 6, height: 6, radius: 2 }, itemMargin: { horizontal: 8 } },
     tooltip: { theme: dark ? 'dark' : 'light', style: { fontSize: '11px' }, x: { show: true } },
     dataLabels: { enabled: false },
+    noData,
   }
   const fill = (o = 0.12) => ({ type: 'gradient', gradient: { shadeIntensity: 0, opacityFrom: o, opacityTo: 0.01, stops: [0, 95] } })
 
   return {
     latency: { ...base, series: [{ name: 'Latency (ms)', data: h.map(x => x.latency) }], colors: ['#3b82f6'], fill: fill(), yaxis: { ...base.yaxis, min: 0 } },
-    speed:   { ...base, series: [{ name: 'Download', data: h.map(x => x.download) }, { name: 'Upload', data: h.map(x => x.upload) }], colors: ['#10b981', '#8b5cf6'], fill: fill(0.08) },
+    speed:   { ...base, series: [{ name: 'Download', data: h.map(x => x.download || null) }, { name: 'Upload', data: h.map(x => x.upload || null) }], colors: ['#10b981', '#8b5cf6'], fill: fill(0.08) },
     loss: {
       ...base,
       series: [{ name: 'Loss (%)', data: h.map(x => x.loss) }, { name: 'Jitter (ms)', data: h.map(x => x.jitter) }],
       colors: ['#ef4444', '#f59e0b'], fill: fill(0.1),
       yaxis: [
-        { forceNiceScale: true, min: 0, title: { text: 'Loss %',   style: { fontSize: '10px', color: 'var(--muted)' } }, labels: { style: { colors: 'var(--muted)', fontSize: '10px' } } },
-        { opposite: true, forceNiceScale: true, min: 0, title: { text: 'Jitter ms', style: { fontSize: '10px', color: 'var(--muted)' } }, labels: { style: { colors: 'var(--muted)', fontSize: '10px' } } },
+        { forceNiceScale: true, min: 0, axisBorder: { show: true, color: 'var(--border)' }, axisTicks: { show: false }, title: { text: 'Loss %',   style: { fontSize: '10px', color: 'var(--muted)' } }, labels: { style: { colors: 'var(--muted)', fontSize: '10px' } } },
+        { opposite: true, forceNiceScale: true, min: 0, axisBorder: { show: false }, axisTicks: { show: false }, title: { text: 'Jitter ms', style: { fontSize: '10px', color: 'var(--muted)' } }, labels: { style: { colors: 'var(--muted)', fontSize: '10px' } } },
       ],
     },
-    dns: { ...base, series: [{ name: 'DNS (ms)', data: h.map(x => x.dns) }], colors: ['#8b5cf6'], fill: fill(), yaxis: { ...base.yaxis, min: 0 } },
+    dns: { ...base, series: [{ name: 'DNS (ms)', data: h.map(x => x.dns || null) }], colors: ['#8b5cf6'], fill: fill(), yaxis: { ...base.yaxis, min: 0 } },
   }
 })
 
