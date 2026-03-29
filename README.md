@@ -9,8 +9,8 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
 
 <p align="center">
-  <img src="docs/screenshot-dark.png" width="49%" alt="Dark mode" />
-  <img src="docs/screenshot-light.png" width="49%" alt="Light mode" />
+  <img src="docs/v1.1.0/screenshot-dark.png" width="49%" alt="Dark mode" />
+  <img src="docs/v1.1.0/screenshot-light.png" width="49%" alt="Light mode" />
 </p>
 
 
