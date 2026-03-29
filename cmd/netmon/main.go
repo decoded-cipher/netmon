@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
@@ -43,37 +44,17 @@ func main() {
 
 	h := server.NewHandler(s, mon)
 
+	distFS, err := fs.Sub(web.FS, "dist")
+	if err != nil {
+		log.Error("failed to sub web FS", "error", err)
+		os.Exit(1)
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/data", h.GetData)
 	mux.HandleFunc("GET /api/config", h.GetConfig)
 	mux.HandleFunc("POST /api/config", h.SaveConfig)
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		data, err := web.FS.ReadFile("index.html")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html")
-		w.Write(data)
-	})
-	mux.HandleFunc("GET /style.css", func(w http.ResponseWriter, r *http.Request) {
-		data, err := web.FS.ReadFile("style.css")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/css")
-		w.Write(data)
-	})
-	mux.HandleFunc("GET /script.js", func(w http.ResponseWriter, r *http.Request) {
-		data, err := web.FS.ReadFile("script.js")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/javascript")
-		w.Write(data)
-	})
+	mux.Handle("/", http.FileServer(http.FS(distFS)))
 
 	log.Info("starting server", "addr", ":8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {

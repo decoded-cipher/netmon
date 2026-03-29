@@ -53,18 +53,25 @@ func DefaultGateway() string {
 	}
 }
 
-func gatewayDarwin() string {
-	out, err := exec.Command("route", "get", "default").CombinedOutput()
-	if err != nil {
-		return ""
-	}
+// darwinRoute parses "route get default" and returns the default (gateway, interface).
+// Shared by DefaultGateway and GetConnectionInfo to avoid running the command twice.
+func darwinRoute() (gateway, iface string) {
+	out, _ := exec.Command("route", "get", "default").CombinedOutput()
 	for _, line := range strings.Split(string(out), "\n") {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "gateway:") {
-			return strings.TrimSpace(strings.TrimPrefix(line, "gateway:"))
+		switch {
+		case strings.HasPrefix(line, "gateway:"):
+			gateway = strings.TrimSpace(strings.TrimPrefix(line, "gateway:"))
+		case strings.HasPrefix(line, "interface:"):
+			iface = strings.TrimSpace(strings.TrimPrefix(line, "interface:"))
 		}
 	}
-	return ""
+	return
+}
+
+func gatewayDarwin() string {
+	gw, _ := darwinRoute()
+	return gw
 }
 
 // gatewayLinuxProc parses /proc/net/route for the default route (no external commands).

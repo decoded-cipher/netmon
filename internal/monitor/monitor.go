@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math"
 	"net"
@@ -136,6 +137,7 @@ func (m *Monitor) speedWorker(ctx context.Context) {
 }
 
 func (m *Monitor) runPingCycle() {
+	fmt.Println()
 	m.log.Info("ping cycle: start")
 
 	cfg := m.GetConfig() // snapshot config for this cycle
@@ -165,6 +167,11 @@ func (m *Monitor) runPingCycle() {
 
 	results := make([]pingResult, len(allTargets))
 	var wg sync.WaitGroup
+	var connInfo network.ConnectionInfo
+	wg.Go(func() {
+		connInfo, _ = network.GetConnectionInfo()
+	})
+
 	for i, target := range allTargets {
 		wg.Add(1)
 		go func(idx int, t string) {
@@ -248,14 +255,22 @@ func (m *Monitor) runPingCycle() {
 	m.mu.RUnlock()
 
 	meas := store.Measurement{
-		Time:       time.Now().Format(time.RFC3339),
-		NetworkID:  m.currentNetworkID,
-		Latency:    round1(avgLat),
-		Jitter:     round1(avgJitter),
-		PacketLoss: round1(avgLoss),
-		Download:   round1(down),
-		Upload:     round1(up),
-		DNS:        round1(dnsAvg),
+		Time:         time.Now().Format(time.RFC3339),
+		NetworkID:    m.currentNetworkID,
+		Latency:      round1(avgLat),
+		Jitter:       round1(avgJitter),
+		PacketLoss:   round1(avgLoss),
+		Download:     round1(down),
+		Upload:       round1(up),
+		DNS:          round1(dnsAvg),
+		ConnType:     connInfo.Type,
+		ConnRSSI:     connInfo.RSSI,
+		ConnNoise:    connInfo.Noise,
+		ConnSNR:      connInfo.SNR,
+		ConnChannel:  connInfo.Channel,
+		ConnBand:     connInfo.Band,
+		ConnLinkRate: connInfo.LinkRate,
+		ConnDuplex:   connInfo.Duplex,
 	}
 
 	if err := m.store.SaveMeasurement(meas); err != nil {

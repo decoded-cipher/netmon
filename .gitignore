@@ -33,6 +33,10 @@ go.work.sum
 .env
 .env.*
 
+# Frontend
+web/node_modules/
+web/dist/
+
 # macOS
 .DS_Store
 
