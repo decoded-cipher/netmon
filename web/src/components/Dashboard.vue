@@ -41,7 +41,7 @@
         </div>
 
         <!-- Right sidebar -->
-        <div class="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto pb-4 lg:pb-0">
+        <div class="sidebar-scroll flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto pb-4 lg:pb-0">
 
           <AccordionCard section="health" padding="p-3">
             <template #title>

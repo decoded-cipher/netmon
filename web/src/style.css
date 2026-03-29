@@ -369,6 +369,10 @@ textarea.field-input { resize: none; }
 .save-status.ok  { color: var(--green); }
 .save-status.err { color: var(--red); }
 
+/* Sidebar scroll — hidden scrollbar, scrollable */
+.sidebar-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+.sidebar-scroll::-webkit-scrollbar { display: none; }
+
 /* Sidebar card shared patterns */
 .card-row {
   display: flex; justify-content: space-between; align-items: center;
