@@ -4,10 +4,8 @@
       <slot name="title" />
       <svg class="accordion-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
-    <div class="accordion-body">
-      <div class="accordion-body-inner">
-        <slot />
-      </div>
+    <div v-if="!collapsed" class="accordion-body-inner">
+      <slot />
     </div>
   </div>
 </template>
