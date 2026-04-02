@@ -2,7 +2,7 @@ BINARY  := netmon
 CMD     := ./cmd/netmon
 IMAGE   := netmon
 
-.PHONY: build ui run dev clean vet docker docker-run
+.PHONY: build ui run dev clean vet docker docker-run dmg
 
 ui:
 	cd web && npm install && npm run build
@@ -19,6 +19,13 @@ dev:
 		go run $(CMD) & \
 		GO_PID=$$!; \
 		cd web && npm run dev'
+
+dmg: build
+	@mkdir -p dist/dmg-staging
+	@cp $(BINARY) dist/dmg-staging/
+	@hdiutil create -volname "NetMon" -srcfolder dist/dmg-staging -ov -format UDZO dist/$(BINARY).dmg
+	@rm -rf dist/dmg-staging
+	@echo "Created dist/$(BINARY).dmg"
 
 clean:
 	rm -f $(BINARY) netmon.db netmon.db-shm netmon.db-wal

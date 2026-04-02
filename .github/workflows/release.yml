@@ -55,3 +55,54 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dmg:
+    name: macOS DMG
+    runs-on: macos-latest
+    needs: release
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build frontend
+        run: npm ci && npm run build
+        working-directory: web
+
+      - name: Build darwin binaries
+        run: |
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build \
+            -ldflags "-s -w -X main.version=${{ github.ref_name }}" \
+            -o netmon-darwin-arm64 ./cmd/netmon
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build \
+            -ldflags "-s -w -X main.version=${{ github.ref_name }}" \
+            -o netmon-darwin-amd64 ./cmd/netmon
+
+      - name: Create DMGs
+        run: |
+          for arch in arm64 amd64; do
+            staging=$(mktemp -d)
+            cp "netmon-darwin-${arch}" "${staging}/netmon"
+            hdiutil create -volname "NetMon" -srcfolder "${staging}" \
+              -ov -format UDZO "netmon_darwin_${arch}.dmg"
+            rm -rf "${staging}"
+          done
+
+      - name: Upload DMGs to release
+        run: gh release upload ${{ github.ref_name }} netmon_darwin_arm64.dmg netmon_darwin_amd64.dmg
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

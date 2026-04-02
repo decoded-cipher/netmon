@@ -31,7 +31,18 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 
 ### Download a release
 
-Pre-built binaries for Linux, macOS, and Windows (amd64 + arm64) are available on the [Releases](https://github.com/decoded-cipher/netmon/releases) page.
+Pre-built binaries for Linux, macOS, and Windows are available on the [Releases](https://github.com/decoded-cipher/netmon/releases) page.
+
+| Platform | Download |
+|----------|----------|
+| macOS (Apple Silicon) | `netmon_darwin_arm64.tar.gz` · `netmon_darwin_arm64.dmg` |
+| macOS (Intel) | `netmon_darwin_amd64.tar.gz` · `netmon_darwin_amd64.dmg` |
+| Linux x86-64 | `netmon_linux_amd64.tar.gz` |
+| Linux ARM64 | `netmon_linux_arm64.tar.gz` |
+| Linux ARMv7 (Raspberry Pi 2/3/4/5) | `netmon_linux_armv7.tar.gz` |
+| Linux ARMv6 (Raspberry Pi 1/Zero) | `netmon_linux_armv6.tar.gz` |
+| Windows x86-64 | `netmon_windows_amd64.zip` |
+| Windows ARM64 | `netmon_windows_arm64.zip` |
 
 ```bash
 # example: Linux amd64
@@ -78,6 +89,7 @@ make build
 make build      # build Vue frontend then compile binary → ./netmon
 make ui         # build Vue frontend only → web/dist
 make run        # build frontend + run via go run
+make dmg        # build binary and package as a macOS DMG → dist/netmon.dmg
 make clean      # remove binary, database, and web/dist
 make vet        # run go vet on all packages
 make docker     # build Docker image
@@ -128,15 +140,34 @@ web/
 
 | Platform | Tested | Notes |
 |----------|--------|-------|
-| macOS (Apple Silicon / Intel) | Yes | Native binary |
+| macOS (Apple Silicon / Intel) | Yes | Native binary + DMG |
 | Linux x86-64 | Yes | Includes Docker |
-| Linux ARM (Raspberry Pi) | Yes | Build with `GOARCH=arm64` |
+| Linux ARM64 (Raspberry Pi 3/4/5 64-bit) | Yes | Pre-built `netmon_linux_arm64` |
+| Linux ARMv7 (Raspberry Pi 2/3/4/5 32-bit) | Yes | Pre-built `netmon_linux_armv7` |
+| Linux ARMv6 (Raspberry Pi 1/Zero) | Yes | Pre-built `netmon_linux_armv6` |
 | Windows | Partial | Ping parsing works; SSID detection via `netsh` |
 | Docker | Yes | See `infra/Dockerfile` and `infra/docker-compose.yml` |
 
 ### Raspberry Pi
 
+Pre-built binaries are available for all Pi generations — download the right one from the [Releases](https://github.com/decoded-cipher/netmon/releases) page:
+
+| Pi model | Binary |
+|----------|--------|
+| Pi 1, Zero, Zero W | `netmon_linux_armv6.tar.gz` |
+| Pi 2, 3, 4, 5 (32-bit OS) | `netmon_linux_armv7.tar.gz` |
+| Pi 3, 4, 5 (64-bit OS) | `netmon_linux_arm64.tar.gz` |
+
+Or cross-compile from source:
+
 ```bash
+# ARMv7 (Pi 2/3/4/5 running a 32-bit OS)
+GOOS=linux GOARCH=arm GOARM=7 go build -o netmon ./cmd/netmon
+
+# ARMv6 (Pi 1 / Zero)
+GOOS=linux GOARCH=arm GOARM=6 go build -o netmon ./cmd/netmon
+
+# ARM64 (Pi 3/4/5 running a 64-bit OS)
 GOOS=linux GOARCH=arm64 go build -o netmon ./cmd/netmon
 ```
 

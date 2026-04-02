@@ -3,10 +3,9 @@
 ## Prerequisites
 
 - **Go 1.21+** — [install](https://go.dev/dl/)
-- **C compiler** — required by the SQLite driver (`go-sqlite3` uses CGO)
-  - macOS: `xcode-select --install`
-  - Linux: `sudo apt install gcc` / `sudo dnf install gcc`
-  - Windows: [TDM-GCC](https://jmeubank.github.io/tdm-gcc/) or WSL
+- **Node.js 18+** — [install](https://nodejs.org/) (for building the Vue frontend)
+
+No C compiler needed — the project uses `modernc.org/sqlite`, a pure-Go SQLite driver (`CGO_ENABLED=0`).
 
 ## Run locally
 
@@ -32,19 +31,20 @@ internal/
   network/         Cross-platform network identity detection
     network.go     Detect(), DefaultGateway(), SSID helpers per OS
   server/          HTTP layer
-    handlers.go    GET /api/data handler, DashboardData response type
+    handlers.go    JSON API handlers
+    version.go     Version check against GitHub releases
   store/           SQLite persistence
-    store.go       Schema, migrations, CRUD for all 4 tables
-web/
-  index.html       Single-page dashboard (TailwindCSS + ApexCharts)
-  web.go           embed.FS — bundles index.html into the binary
+    store.go       Schema, migrations, CRUD for all tables
+web/               Vue 3 + Vite frontend
+  src/             Components, composables, and utilities
+  web.go           embed.FS — bundles web/dist into the binary at build time
 ```
 
 ## Making changes
 
 - **Backend changes** — edit files under `internal/`. Run `make vet` and `make build` to verify.
-- **Dashboard changes** — edit `web/index.html`. Rebuild and refresh the browser.
-- **Adding a new metric** — add a column to the `measurements` table in `store.go → migrate()`, update `Measurement` struct, `SaveMeasurement`, and `GetHistory`; wire it through `monitor.go → runPingCycle()`; render it in `index.html`.
+- **Frontend changes** — edit files under `web/src/`. Run `make dev` to get hot-reload (Vite proxies `/api/*` to the Go backend).
+- **Adding a new metric** — add a column to the `measurements` table in `store.go`, update `Measurement` struct, `SaveMeasurement`, and `GetHistory`; wire it through `monitor.go → runPingCycle()`; add a chart in the Vue components.
 
 ## Pull requests
 
