@@ -2,7 +2,7 @@ BINARY  := netmon
 CMD     := ./cmd/netmon
 IMAGE   := netmon
 
-.PHONY: build ui run clean vet docker docker-run
+.PHONY: build ui run dev clean vet docker docker-run
 
 ui:
 	cd web && npm install && npm run build
@@ -12,6 +12,13 @@ build: ui
 
 run: ui
 	go run $(CMD)
+
+# Backend (:8080) + Vite (:5173) so /api/* is proxied and returns real JSON.
+dev:
+	@bash -c 'set -e; trap "kill $$GO_PID 2>/dev/null" EXIT INT TERM; \
+		go run $(CMD) & \
+		GO_PID=$$!; \
+		cd web && npm run dev'
 
 clean:
 	rm -f $(BINARY) netmon.db netmon.db-shm netmon.db-wal
