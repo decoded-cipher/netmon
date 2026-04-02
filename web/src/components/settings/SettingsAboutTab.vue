@@ -119,9 +119,10 @@
       </div>
     </div>
 
-    <nav class="ab-links" aria-label="Project links">
+    <nav class="ab-links" aria-labelledby="ab-links-heading">
+      <h3 id="ab-links-heading" class="ab-links-heading">Resources</h3>
       <ul class="ab-linklist">
-        <li v-for="(link, i) in projectLinks" :key="i">
+        <li v-for="(link, i) in projectLinks" :key="i" class="ab-linkitem">
           <a
             :href="link.href"
             target="_blank"
@@ -138,21 +139,24 @@
               <span class="ab-linkrow-title">{{ link.title }}</span>
               <span class="ab-linkrow-meta">{{ link.meta }}</span>
             </span>
-            <svg
-              class="ab-linkrow-chev"
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="m9 18 6-6-6-6" />
-            </svg>
+            <span class="ab-linkrow-ext-wrap" aria-hidden="true">
+              <svg
+                class="ab-linkrow-ext"
+                xmlns="http://www.w3.org/2000/svg"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </span>
           </a>
         </li>
       </ul>
@@ -165,14 +169,14 @@ const REPO = 'https://github.com/decoded-cipher/netmon'
 const ISSUES = 'https://github.com/decoded-cipher/netmon/issues'
 const LICENSE = 'https://github.com/decoded-cipher/netmon/blob/master/LICENSE'
 
-const svgGithub = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>`
-const svgIssue = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
-const svgFile = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`
+const svgGithub = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>`
+const svgIssue = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
+const svgFile = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>`
 
 const projectLinks = [
-  { href: REPO, title: 'Source code', meta: 'decoded-cipher/netmon on GitHub', icon: svgGithub, tone: 'slate' },
-  { href: ISSUES, title: 'Report a bug', meta: 'GitHub issues', icon: svgIssue, tone: 'amber' },
-  { href: LICENSE, title: 'License', meta: 'MIT — full text on GitHub', icon: svgFile, tone: 'muted' },
+  { href: REPO, title: 'Source code', meta: 'Repository on GitHub', icon: svgGithub, tone: 'slate' },
+  { href: ISSUES, title: 'Report an issue', meta: 'GitHub Issues', icon: svgIssue, tone: 'amber' },
+  { href: LICENSE, title: 'License', meta: 'MIT — view on GitHub', icon: svgFile, tone: 'muted' },
 ]
 
 defineProps({
@@ -359,10 +363,12 @@ defineEmits(['check', 'update', 'reload'])
 }
 
 .ab-updates {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.35rem;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.55rem;
 }
 
 .ab-msg {
@@ -389,8 +395,10 @@ defineEmits(['check', 'update', 'reload'])
 .ab-updates-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.5rem;
   align-items: center;
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
 }
 
 .ab-updates-actions .btn {
@@ -410,68 +418,109 @@ defineEmits(['check', 'update', 'reload'])
 }
 
 .ab-links {
-  margin-top: 0.75rem;
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ab-links-heading {
+  margin: 0;
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  line-height: 1.2;
 }
 
 .ab-linklist {
   list-style: none;
   margin: 0;
   padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--card);
-  overflow: hidden;
-  box-shadow: 0 1px 2px var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.ab-linklist li + li {
-  border-top: 1px solid var(--border);
+.ab-linkitem {
+  margin: 0;
+  border-radius: 11px;
+  border: 1px solid var(--border);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--fg) 2.5%, var(--card)),
+    var(--card)
+  );
+  box-shadow: 0 1px 2px var(--shadow);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ab-linkitem:has(.ab-linkrow:hover) {
+  border-color: color-mix(in srgb, var(--accent) 22%, var(--border));
+  box-shadow:
+    0 1px 2px var(--shadow),
+    0 4px 14px color-mix(in srgb, var(--accent) 6%, transparent);
 }
 
 .ab-linkrow {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.55rem 0.7rem;
+  gap: 0.7rem;
+  padding: 0.65rem 0.75rem;
   text-decoration: none;
   color: inherit;
-  transition: background 0.12s ease;
+  transition: background 0.15s ease;
   font-size: 0.8125rem;
 }
 
 .ab-linkrow:hover {
-  background: var(--input-hover-bg);
+  background: color-mix(in srgb, var(--accent) 5%, var(--input-hover-bg));
 }
 
 .ab-linkrow:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
 }
 
 .ab-linkrow-ico {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
 }
 
 .ab-linkrow-ico--slate {
-  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--fg) 8%, transparent),
+    color-mix(in srgb, var(--fg) 4%, transparent)
+  );
   color: var(--subtle);
-  border: 1px solid color-mix(in srgb, var(--fg) 10%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--fg) 12%, var(--border));
 }
 
 .ab-linkrow-ico--amber {
-  background: var(--yellow-soft);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--yellow) 14%, var(--card)),
+    var(--yellow-soft)
+  );
   color: var(--yellow);
-  border: 1px solid color-mix(in srgb, var(--yellow) 28%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--yellow) 30%, var(--border));
 }
 
 .ab-linkrow-ico--muted {
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  background: linear-gradient(
+    155deg,
+    color-mix(in srgb, var(--fg) 6%, transparent),
+    color-mix(in srgb, var(--fg) 3%, transparent)
+  );
   color: var(--muted);
   border: 1px solid var(--border);
 }
@@ -481,33 +530,53 @@ defineEmits(['check', 'update', 'reload'])
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
+  gap: 0.15rem;
 }
 
 .ab-linkrow-title {
   font-size: 0.8125rem;
   font-weight: 600;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   color: var(--fg);
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .ab-linkrow-meta {
   font-size: 0.6875rem;
   font-weight: 400;
-  line-height: 1.4;
+  line-height: 1.35;
   color: var(--muted);
 }
 
-.ab-linkrow-chev {
+.ab-linkrow-ext-wrap {
   flex-shrink: 0;
-  color: var(--muted);
-  opacity: 0.45;
-  transition: opacity 0.12s ease, color 0.12s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
 }
 
-.ab-linkrow:hover .ab-linkrow-chev {
-  opacity: 0.9;
+.ab-linkrow-ext {
+  color: var(--muted);
+  opacity: 0.75;
+  transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.ab-linkrow:hover .ab-linkrow-ext {
+  opacity: 1;
   color: var(--accent);
+}
+
+.ab-linkrow:hover .ab-linkrow-ext-wrap {
+  border-color: color-mix(in srgb, var(--accent) 25%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.ab-linkrow:hover .ab-linkrow-ext {
+  transform: translate(1px, -1px);
 }
 </style>
