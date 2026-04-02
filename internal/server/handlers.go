@@ -11,12 +11,13 @@ import (
 )
 
 type Handler struct {
-	store *store.Store
-	mon   *monitor.Monitor
+	store   *store.Store
+	mon     *monitor.Monitor
+	version *versionChecker
 }
 
-func NewHandler(s *store.Store, mon *monitor.Monitor) *Handler {
-	return &Handler{store: s, mon: mon}
+func NewHandler(s *store.Store, mon *monitor.Monitor, version string) *Handler {
+	return &Handler{store: s, mon: mon, version: newVersionChecker(version)}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

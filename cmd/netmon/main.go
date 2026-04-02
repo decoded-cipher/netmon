@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -13,7 +14,15 @@ import (
 	"netmon/web"
 )
 
+// version is set at build time via -ldflags "-X main.version=vX.Y.Z"
+var version = "dev"
+
 func main() {
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v" || os.Args[1] == "version") {
+		fmt.Println("netmon", version)
+		os.Exit(0)
+	}
+
 	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	s, err := store.New("netmon.db")
@@ -42,7 +51,7 @@ func main() {
 	mon := monitor.New(cfg, s, log)
 	mon.Start(ctx)
 
-	h := server.NewHandler(s, mon)
+	h := server.NewHandler(s, mon, version)
 
 	distFS, err := fs.Sub(web.FS, "dist")
 	if err != nil {
@@ -54,6 +63,8 @@ func main() {
 	mux.HandleFunc("GET /api/data", h.GetData)
 	mux.HandleFunc("GET /api/config", h.GetConfig)
 	mux.HandleFunc("POST /api/config", h.SaveConfig)
+	mux.HandleFunc("GET /api/version", h.GetVersion)
+	mux.HandleFunc("POST /api/update", h.TriggerUpdate)
 	mux.Handle("/", http.FileServer(http.FS(distFS)))
 
 	log.Info("starting server", "addr", ":8080")
