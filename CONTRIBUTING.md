@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Go 1.21+** — [install](https://go.dev/dl/)
+- **Go 1.25+** — [install](https://go.dev/dl/)
 - **Node.js 18+** — [install](https://nodejs.org/) (for building the Vue frontend)
 
 No C compiler needed — the project uses `modernc.org/sqlite`, a pure-Go SQLite driver (`CGO_ENABLED=0`).

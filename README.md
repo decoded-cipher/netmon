@@ -6,7 +6,7 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 [![Go Report Card](https://goreportcard.com/badge/github.com/decoded-cipher/netmon)](https://goreportcard.com/report/github.com/decoded-cipher/netmon)
 [![No CGO](https://img.shields.io/badge/CGO-disabled-brightgreen)](go.mod)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
+[![Go](https://img.shields.io/badge/Go-1.25+-00ADD8?logo=go)](https://golang.org)
 
 <p align="center">
   <img src="docs/v1.1.0/screenshot-dark.png" width="49%" alt="Dark mode" />
@@ -75,7 +75,7 @@ Then open **http://localhost:8080**.
 
 ### Build from source
 
-Requires Go 1.21+ and Node.js 18+ — no C compiler needed.
+Requires Go 1.25+ and Node.js 18+ — no C compiler needed.
 
 ```bash
 git clone https://github.com/decoded-cipher/netmon.git
@@ -176,6 +176,6 @@ GOOS=linux GOARCH=arm64 go build -o netmon ./cmd/netmon
 
 ## Requirements
 
-- **Go 1.21+** for building from source
+- **Go 1.25+** for building from source
 - **Node.js 18+** for building the frontend (`make ui` / `make build`)
 - `ping` available in `PATH` at runtime (standard on all platforms)
