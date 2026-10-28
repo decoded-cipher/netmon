@@ -19,6 +19,7 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 - **Live dashboard** — auto-refreshing charts for latency, throughput, packet loss, jitter, and DNS
 - **Connection info** — records WiFi and ethernet metrics per measurement (RSSI, SNR, noise, channel, band, link rate, duplex); works on macOS, Linux, and Windows
 - **Network change detection** — automatically detects Wi-Fi/network switches and tags measurements per network; works on macOS, Linux, Windows, Docker, and Raspberry Pi
+- **On-demand speed test** — run a download/upload test from the Throughput chart without waiting for the next scheduled one
 - **Settings UI** — configure ping targets, DNS targets, and intervals directly from the dashboard; changes persist across restarts
 - **`config.json`** — file-based defaults loaded at startup; overridden by any settings saved via the UI
 - **No CGO** — pure-Go SQLite driver, stdlib HTTP server; no C compiler required to build or run
@@ -121,7 +122,7 @@ Settings are resolved in this order — each step overrides the previous:
 cmd/netmon/          Entry point — wires packages, starts HTTP server
 config.json          Default configuration (overridden by UI settings saved to DB)
 internal/
-  monitor/           Ping + speed workers (concurrent, 60s / 30m intervals)
+  monitor/           Ping + speed workers (concurrent, 60s / 60m intervals)
   network/           Cross-platform gateway detection, SSID, and connection info (RSSI, SNR, etc.)
   server/            HTTP handler, JSON API response types
   store/             SQLite layer — schema.sql, queries.sql, UPSERT patterns, aggregation queries
@@ -146,7 +147,7 @@ web/
 | Linux ARM64 (Raspberry Pi 3/4/5 64-bit) | Yes | Pre-built `netmon_linux_arm64` |
 | Linux ARMv7 (Raspberry Pi 2/3/4/5 32-bit) | Yes | Pre-built `netmon_linux_armv7` |
 | Linux ARMv6 (Raspberry Pi 1/Zero) | Yes | Pre-built `netmon_linux_armv6` |
-| Windows | Partial | Ping parsing works; SSID detection via `netsh` |
+| Windows | Partial | Ping parsing, SSID and connection info (via `netsh` and the adapter API); no self-update |
 | Docker | Yes | See `infra/Dockerfile` and `infra/docker-compose.yml` |
 
 ### Raspberry Pi

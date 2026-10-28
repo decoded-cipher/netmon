@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
+	"strings"
 	"time"
 )
 
@@ -34,7 +36,7 @@ func (h *Handler) TriggerUpdate(w http.ResponseWriter, r *http.Request) {
 
 	tag    := vr.Latest
 	goos   := runtime.GOOS
-	goarch := runtime.GOARCH
+	goarch := archiveArch()
 	archiveURL := fmt.Sprintf(
 		"https://github.com/decoded-cipher/netmon/releases/download/%s/netmon_%s_%s.tar.gz",
 		tag, goos, goarch,
@@ -121,4 +123,19 @@ func downloadAndReplace(url, execPath string) error {
 	}
 	success = true
 	return nil
+}
+
+// archiveArch returns the arch suffix used in release archive names (armv6/armv7 for 32-bit ARM).
+func archiveArch() string {
+	if runtime.GOARCH != "arm" {
+		return runtime.GOARCH
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		for _, s := range bi.Settings {
+			if s.Key == "GOARM" {
+				return "armv" + strings.SplitN(s.Value, ",", 2)[0]
+			}
+		}
+	}
+	return "armv6"
 }

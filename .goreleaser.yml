@@ -27,7 +27,7 @@ builds:
       - goos: windows
         goarch: arm
     ldflags:
-      - -s -w -X main.version={{.Version}}
+      - -s -w -X main.version={{.Tag}}
 
 archives:
   - id: netmon
