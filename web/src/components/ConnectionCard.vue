@@ -22,7 +22,7 @@
     <div v-else-if="type === 'wifi'" class="flex flex-col gap-1.5">
       <div class="card-row">
         <span class="card-row-label">Signal (RSSI)</span>
-        <span class="card-row-value" :style="{ color: signalColor }">{{ rssi }} dBm</span>
+        <span class="card-row-value" :style="{ color: signalColor }">{{ rssi ? rssi + ' dBm' : '—' }}</span>
       </div>
       <div class="card-row">
         <span class="card-row-label">SNR</span>
@@ -36,8 +36,8 @@
         <span class="card-row-label">Link Rate</span>
         <span class="card-row-value">{{ rate ? rate + ' Mbps' : '—' }}</span>
       </div>
-      <div class="card-divider" />
-      <div class="flex items-center gap-2">
+      <div v-if="rssi" class="card-divider" />
+      <div v-if="rssi" class="flex items-center gap-2">
         <div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden">
           <div :style="{ width: signalPct + '%', background: signalColor, height: '100%', borderRadius: '2px', transition: 'width 0.5s ease' }" />
         </div>
@@ -81,6 +81,7 @@ const duplex = computed(() => conn.value?.conn_duplex ?? '')
 
 const signalPct  = computed(() => Math.max(0, Math.min(100, ((rssi.value + 90) / 60) * 100)))
 const signalColor = computed(() => {
+  if (!rssi.value) return 'var(--fg)'
   if (rssi.value >= -50) return 'var(--green)'
   if (rssi.value >= -65) return 'var(--green)'
   if (rssi.value >= -75) return 'var(--yellow)'
