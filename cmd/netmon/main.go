@@ -67,6 +67,7 @@ func main() {
 	mux.HandleFunc("GET /api/data", h.GetData)
 	mux.HandleFunc("GET /api/config", h.GetConfig)
 	mux.HandleFunc("POST /api/config", h.SaveConfig)
+	mux.HandleFunc("POST /api/speedtest", h.RunSpeedTest)
 	mux.HandleFunc("GET /api/version", h.GetVersion)
 	mux.HandleFunc("POST /api/update", h.TriggerUpdate)
 	mux.Handle("/", http.FileServer(http.FS(distFS)))

@@ -5,9 +5,12 @@
         <span class="chart-dot" :style="{ background: dot }" />
         {{ title }}
       </h3>
-      <div v-if="label || icon" class="chart-badge" :style="{ color: dot }">
-        <span v-if="icon" class="chart-badge-icon" v-html="icon" />
-        <span>{{ label }}</span>
+      <div class="chart-header-right">
+        <slot name="actions" />
+        <div v-if="label || icon" class="chart-badge" :style="{ color: dot }">
+          <span v-if="icon" class="chart-badge-icon" v-html="icon" />
+          <span>{{ label }}</span>
+        </div>
       </div>
     </div>
     <div :id="labelId" ref="chartEl" style="height:100%" />

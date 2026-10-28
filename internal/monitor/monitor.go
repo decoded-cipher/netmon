@@ -2,6 +2,7 @@ package monitor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -35,6 +36,26 @@ func DefaultConfig() Config {
 	}
 }
 
+const (
+	speedAutoCooldown    = time.Hour
+	troubleLossPct       = 5
+	troubleLatencyRatio  = 2
+	troubleLatencyMinMs  = 30
+	latencyBaselineAlpha = 0.1
+)
+
+var ErrSpeedTestRunning = errors.New("a speed test is already running")
+
+// SpeedTestStatus describes the most recent speed test.
+type SpeedTestStatus struct {
+	Running  bool    `json:"running"`
+	LastAt   string  `json:"last_at"`
+	Trigger  string  `json:"trigger"`
+	Download float64 `json:"download"`
+	Upload   float64 `json:"upload"`
+	Error    string  `json:"error,omitempty"`
+}
+
 type Monitor struct {
 	cfgMu sync.RWMutex
 	cfg   Config
@@ -43,15 +64,22 @@ type Monitor struct {
 	log   *slog.Logger
 	wg    sync.WaitGroup
 
-	mu       sync.RWMutex
-	lastDown float64
-	lastUp   float64
+	speedMu  sync.Mutex
+	speedReq chan struct{}
+
+	mu        sync.RWMutex
+	lastDown  float64
+	lastUp    float64
+	speedStat SpeedTestStatus
 
 	currentNetworkID string
+	latBaseline      float64
+	troubleTested    bool
+	lastAutoAt       time.Time
 }
 
 func New(cfg Config, s *store.Store, log *slog.Logger) *Monitor {
-	return &Monitor{cfg: cfg, store: s, log: log}
+	return &Monitor{cfg: cfg, store: s, log: log, speedReq: make(chan struct{}, 1)}
 }
 
 // GetConfig returns a snapshot of the current config.
@@ -120,7 +148,7 @@ func (m *Monitor) pingWorker(ctx context.Context) {
 }
 
 func (m *Monitor) speedWorker(ctx context.Context) {
-	m.runSpeedCycle(ctx)
+	m.runSpeedCycle(ctx, "startup")
 
 	ticker := time.NewTicker(m.cfg.SpeedInterval)
 	defer ticker.Stop()
@@ -131,8 +159,59 @@ func (m *Monitor) speedWorker(ctx context.Context) {
 			m.log.Info("speed worker stopped")
 			return
 		case <-ticker.C:
-			m.runSpeedCycle(ctx)
+			m.runSpeedCycle(ctx, "scheduled")
+		case <-m.speedReq:
+			m.runSpeedCycle(ctx, "auto")
 		}
+	}
+}
+
+// RunSpeedTest runs a speed test immediately and returns its result.
+func (m *Monitor) RunSpeedTest(ctx context.Context) (SpeedTestStatus, error) {
+	return m.runSpeedCycle(ctx, "manual")
+}
+
+// SpeedTestStatus returns the state of the most recent speed test.
+func (m *Monitor) SpeedTestStatus() SpeedTestStatus {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.speedStat
+}
+
+// isTrouble reports whether a ping cycle looks degraded enough to warrant a speed test.
+func isTrouble(avgLat, baseline, avgLoss float64, latCnt int) bool {
+	if latCnt == 0 {
+		return false
+	}
+	if avgLoss >= troubleLossPct {
+		return true
+	}
+	return baseline > 0 && avgLat > baseline*troubleLatencyRatio && avgLat-baseline >= troubleLatencyMinMs
+}
+
+func (m *Monitor) checkTrouble(avgLat, avgLoss float64, latCnt int) {
+	trouble := isTrouble(avgLat, m.latBaseline, avgLoss, latCnt)
+	if latCnt > 0 {
+		if m.latBaseline == 0 {
+			m.latBaseline = avgLat
+		} else {
+			m.latBaseline += latencyBaselineAlpha * (avgLat - m.latBaseline)
+		}
+	}
+
+	if !trouble {
+		m.troubleTested = false
+		return
+	}
+	if m.troubleTested || time.Since(m.lastAutoAt) < speedAutoCooldown {
+		return
+	}
+	select {
+	case m.speedReq <- struct{}{}:
+		m.log.Info("connection degraded, requesting speed test", "latency", round1(avgLat), "loss", round1(avgLoss))
+		m.troubleTested = true
+		m.lastAutoAt = time.Now()
+	default:
 	}
 }
 
@@ -149,6 +228,7 @@ func (m *Monitor) runPingCycle() {
 			m.log.Info("network changed", "from", m.currentNetworkID, "to", netInfo.ID)
 		}
 		m.currentNetworkID = netInfo.ID
+		m.latBaseline = 0
 		if err := m.store.LogNetworkEvent(store.NetworkEvent{
 			Time:    time.Now().Format(time.RFC3339),
 			Network: netInfo.ID,
@@ -255,6 +335,7 @@ func (m *Monitor) runPingCycle() {
 	if cnt == 0 && len(results) > start {
 		avgLoss = 100
 	}
+	m.checkTrouble(avgLat, avgLoss, latCnt)
 
 	m.mu.RLock()
 	down := m.lastDown
@@ -286,8 +367,18 @@ func (m *Monitor) runPingCycle() {
 	m.log.Info("ping cycle: done", "latency", meas.Latency, "loss", meas.PacketLoss, "network", meas.NetworkID)
 }
 
-func (m *Monitor) runSpeedCycle(ctx context.Context) {
-	m.log.Info("speed test: start")
+func (m *Monitor) runSpeedCycle(ctx context.Context, trigger string) (SpeedTestStatus, error) {
+	if !m.speedMu.TryLock() {
+		m.log.Info("speed test skipped, one is already running", "trigger", trigger)
+		return m.SpeedTestStatus(), ErrSpeedTestRunning
+	}
+	defer m.speedMu.Unlock()
+
+	m.mu.Lock()
+	m.speedStat.Running = true
+	m.mu.Unlock()
+
+	m.log.Info("speed test: start", "trigger", trigger)
 
 	cfg := m.GetConfig()
 	ctx, cancel := context.WithTimeout(ctx, speedTestTimeout)
@@ -295,26 +386,40 @@ func (m *Monitor) runSpeedCycle(ctx context.Context) {
 	client := newSpeedClient()
 	defer client.CloseIdleConnections()
 
-	down, err := measureDownload(ctx, client, cfg.DownloadURL)
-	if err != nil {
-		m.log.Error("download test failed", "error", err)
+	down, downErr := measureDownload(ctx, client, cfg.DownloadURL)
+	if downErr != nil {
+		m.log.Error("download test failed", "error", downErr)
+		downErr = fmt.Errorf("download: %w", downErr)
 	} else {
 		m.log.Info("download", "mbps", math.Round(down*100)/100)
 	}
 
-	up, err := measureUpload(ctx, client, cfg.UploadURL)
-	if err != nil {
-		m.log.Error("upload test failed", "error", err)
+	up, upErr := measureUpload(ctx, client, cfg.UploadURL)
+	if upErr != nil {
+		m.log.Error("upload test failed", "error", upErr)
+		upErr = fmt.Errorf("upload: %w", upErr)
 	} else {
 		m.log.Info("upload", "mbps", math.Round(up*100)/100)
 	}
+	err := errors.Join(downErr, upErr)
 
 	m.mu.Lock()
 	m.lastDown = math.Round(down*100) / 100
 	m.lastUp = math.Round(up*100) / 100
+	m.speedStat = SpeedTestStatus{
+		LastAt:   time.Now().Format(time.RFC3339),
+		Trigger:  trigger,
+		Download: round1(down),
+		Upload:   round1(up),
+	}
+	if err != nil {
+		m.speedStat.Error = err.Error()
+	}
+	stat := m.speedStat
 	m.mu.Unlock()
 
-	m.log.Info("speed test: done")
+	m.log.Info("speed test: done", "trigger", trigger)
+	return stat, err
 }
 
 func round1(v float64) float64 {

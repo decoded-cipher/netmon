@@ -35,7 +35,14 @@
           <!-- Charts 2×2 — :key forces full remount on theme/resize -->
           <div id="chartGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3 lg:flex-1 lg:min-h-0">
             <ChartPanel :key="'lat-' + chartKey" :config="chartConfigs.latency" :label="chartLabels.latency" title="Latency"               dot="var(--accent)"  label-id="latencyChart" :icon="CHART_ICONS.latency" />
-            <ChartPanel :key="'spd-' + chartKey" :config="chartConfigs.speed"   :label="chartLabels.speed"   title="Throughput"            dot="var(--green)"   label-id="speedChart"   :icon="CHART_ICONS.speed"   />
+            <ChartPanel :key="'spd-' + chartKey" :config="chartConfigs.speed"   :label="chartLabels.speed"   title="Throughput"            dot="var(--green)"   label-id="speedChart"   :icon="CHART_ICONS.speed">
+              <template #actions>
+                <button type="button" class="chart-action" :disabled="speedBusy" :title="speedTitle" :aria-label="speedBusy ? 'Speed test running' : 'Run speed test now'" @click="runSpeedTest">
+                  <svg :class="{ spin: speedBusy }" xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  <span>{{ speedBusy ? 'Testing…' : 'Test now' }}</span>
+                </button>
+              </template>
+            </ChartPanel>
             <ChartPanel :key="'los-' + chartKey" :config="chartConfigs.loss"    :label="chartLabels.loss"    title="Packet Loss &amp; Jitter" dot="var(--red)"  label-id="lossChart"    :icon="CHART_ICONS.loss"    />
             <ChartPanel :key="'dns-' + chartKey" :config="chartConfigs.dns"     :label="chartLabels.dns"     title="DNS Resolution"        dot="var(--purple)"  label-id="dnsChart"     :icon="CHART_ICONS.dns"    />
           </div>
@@ -156,6 +163,33 @@ async function loadData(forceRecreate = false) {
     if (forceRecreate) chartKey.value++
   } catch (_) { /* keep stale data on error */ }
   isLoading.value = false
+}
+
+// ── Speed test ───────────────────────────────────────────────────────────
+const speedRequested = ref(false)
+const speedBusy = computed(() => speedRequested.value || !!apiData.value?.speed_test?.running)
+const speedTitle = computed(() => {
+  const st = apiData.value?.speed_test
+  if (!st?.last_at) return 'Run a speed test now'
+  const min = Math.floor((Date.now() - new Date(st.last_at)) / 60000)
+  const ago = min < 1 ? 'just now' : min < 60 ? min + 'm ago' : Math.floor(min / 60) + 'h ago'
+  return `Last test ${ago} (${st.trigger}). Uses about 25 MB.`
+})
+
+async function runSpeedTest() {
+  if (speedBusy.value) return
+  speedRequested.value = true
+  try {
+    const res = await fetch('/api/speedtest', { method: 'POST' })
+    const st  = await res.json()
+    if (res.status === 409)  showToast('speed-busy', 'Speed Test Running',  'A test is already in progress',            'warn',  4000)
+    else if (st.error)       showToast('speed-fail', 'Speed Test Failed',   st.error,                                   'error', 7000)
+    else                     showToast('speed-done', 'Speed Test Complete', `↓ ${st.download} Mbps  ↑ ${st.upload} Mbps`, 'ok',    6000)
+  } catch (_) {
+    showToast('speed-fail', 'Speed Test Failed', 'Could not reach netmon', 'error', 7000)
+  }
+  speedRequested.value = false
+  loadData()
 }
 
 function checkThresholds(s, prev) {

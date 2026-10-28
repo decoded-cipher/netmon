@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -27,11 +29,12 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 type DashboardData struct {
-	Summary   store.Summary       `json:"summary"`
-	Targets   []store.PingTarget  `json:"targets"`
-	DNS       []store.DNSCheck    `json:"dns"`
-	History   []store.Measurement `json:"history"`
-	NetworkID string              `json:"network_id"`
+	Summary   store.Summary           `json:"summary"`
+	Targets   []store.PingTarget      `json:"targets"`
+	DNS       []store.DNSCheck        `json:"dns"`
+	History   []store.Measurement     `json:"history"`
+	NetworkID string                  `json:"network_id"`
+	SpeedTest monitor.SpeedTestStatus `json:"speed_test"`
 }
 
 func (h *Handler) GetData(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +71,17 @@ func (h *Handler) GetData(w http.ResponseWriter, r *http.Request) {
 		DNS:       dns,
 		History:   history,
 		NetworkID: h.store.GetCurrentNetworkID(),
+		SpeedTest: h.mon.SpeedTestStatus(),
 	})
+}
+
+func (h *Handler) RunSpeedTest(w http.ResponseWriter, r *http.Request) {
+	stat, err := h.mon.RunSpeedTest(context.WithoutCancel(r.Context()))
+	if errors.Is(err, monitor.ErrSpeedTestRunning) {
+		writeJSON(w, http.StatusConflict, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, stat)
 }
 
 // ConfigPayload is the API shape for GET /api/config and POST /api/config.
