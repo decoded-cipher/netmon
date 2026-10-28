@@ -105,6 +105,7 @@ import ConnectionCard    from './ConnectionCard.vue'
 import QuickStats        from './QuickStats.vue'
 import { useToasts }     from '../composables/useToasts.js'
 import { sparklineSVG }  from '../utils/sparkline.js'
+import { fmt }           from '../utils/format.js'
 
 const props = defineProps({ isDark: Boolean })
 defineEmits(['toggle-theme'])
@@ -201,7 +202,7 @@ function checkThresholds(s, prev) {
   }
   prevStatus.value = curr
   if (prev && s.latency_avg > 150 && prev.latency_avg <= 150)
-    showToast('lat-spike', 'Latency Spike', `${s.latency_avg}ms avg (was ${prev.latency_avg}ms)`, 'warn', 6000)
+    showToast('lat-spike', 'Latency Spike', `${s.latency_avg}ms avg (was ${fmt(prev.latency_avg, 'ms')})`, 'warn', 6000)
 }
 
 // ── Polling & resize ──────────────────────────────────────────────────────
@@ -277,10 +278,10 @@ const metricCards = computed(() => {
   const lc  = s.packet_loss > 1 ? 'red' : 'yellow'
   const C   = { blue: '#3b82f6', green: '#10b981', purple: '#8b5cf6', red: '#ef4444', yellow: '#f59e0b' }
   return [
-    { label: 'Avg Latency', value: s.latency_avg  + ' ms',   icon: ICONS.clock,     color: 'blue',   sub: 'p95 ' + s.latency_p95 + ' ms',            spark: sparklineSVG(l20.map(h => h.latency || null),  C.blue)   },
-    { label: 'Download',    value: s.download_avg + ' Mbps', icon: ICONS.arrowDown, color: 'green',  sub: 'avg throughput',                           spark: sparklineSVG(l20.map(h => h.download || null), C.green)  },
-    { label: 'Upload',      value: s.upload_avg   + ' Mbps', icon: ICONS.arrowUp,   color: 'purple', sub: 'avg throughput',                           spark: sparklineSVG(l20.map(h => h.upload || null),   C.purple) },
-    { label: 'Packet Loss', value: s.packet_loss  + '%',     icon: ICONS.activity,  color: lc,       sub: s.packet_loss < 1 ? 'healthy' : 'elevated', spark: sparklineSVG(l20.map(h => h.loss),     C[lc])    },
+    { label: 'Avg Latency', value: fmt(s.latency_avg, ' ms'),    icon: ICONS.clock,     color: 'blue',   sub: 'p95 ' + fmt(s.latency_p95, ' ms'),        spark: sparklineSVG(l20.map(h => h.latency),  C.blue)   },
+    { label: 'Download',    value: fmt(s.download_avg, ' Mbps'), icon: ICONS.arrowDown, color: 'green',  sub: 'avg throughput',                           spark: sparklineSVG(l20.map(h => h.download), C.green)  },
+    { label: 'Upload',      value: fmt(s.upload_avg, ' Mbps'),   icon: ICONS.arrowUp,   color: 'purple', sub: 'avg throughput',                           spark: sparklineSVG(l20.map(h => h.upload),   C.purple) },
+    { label: 'Packet Loss', value: s.packet_loss  + '%',          icon: ICONS.activity,  color: lc,       sub: s.packet_loss < 1 ? 'healthy' : 'elevated', spark: sparklineSVG(l20.map(h => h.loss),     C[lc])    },
   ]
 })
 
@@ -326,11 +327,11 @@ const chartConfigs = computed(() => {
   const fill = (o = 0.12) => ({ type: 'gradient', gradient: { shadeIntensity: 0, opacityFrom: o, opacityTo: 0.01, stops: [0, 95] } })
 
   return {
-    latency: { ...base, series: [{ name: 'Latency (ms)', data: h.map(x => x.latency || null) }], colors: ['#3b82f6'], fill: fill(), yaxis: { ...base.yaxis, min: 0 } },
-    speed:   { ...base, series: [{ name: 'Download', data: h.map(x => x.download || null) }, { name: 'Upload', data: h.map(x => x.upload || null) }], colors: ['#10b981', '#8b5cf6'], fill: fill(0.08) },
+    latency: { ...base, series: [{ name: 'Latency (ms)', data: h.map(x => x.latency) }], colors: ['#3b82f6'], fill: fill(), yaxis: { ...base.yaxis, min: 0 } },
+    speed:   { ...base, series: [{ name: 'Download', data: h.map(x => x.download) }, { name: 'Upload', data: h.map(x => x.upload) }], colors: ['#10b981', '#8b5cf6'], fill: fill(0.08) },
     loss: {
       ...base,
-      series: [{ name: 'Loss (%)', data: h.map(x => x.loss) }, { name: 'Jitter (ms)', data: h.map(x => x.latency ? x.jitter : null) }],
+      series: [{ name: 'Loss (%)', data: h.map(x => x.loss) }, { name: 'Jitter (ms)', data: h.map(x => x.jitter) }],
       colors: ['#ef4444', '#f59e0b'], fill: fill(0.1),
       yaxis: [
         { forceNiceScale: true, min: 0, axisBorder: { show: true, color: 'var(--border)' }, axisTicks: { show: false }, title: { text: 'Loss %',   style: { fontSize: '10px', color: 'var(--muted)' } }, labels: { style: { colors: 'var(--muted)', fontSize: '10px' } } },
@@ -345,10 +346,10 @@ const chartLabels = computed(() => {
   if (!summary.value) return { latency: '—', speed: '—', loss: '—', dns: '—' }
   const s = summary.value
   return {
-    latency: s.latency_avg + ' ms',
-    speed:   '↓ ' + s.download_avg + '  ↑ ' + s.upload_avg + ' Mbps',
-    loss:    s.packet_loss + '% · ' + s.jitter_avg + ' ms',
-    dns:     s.dns_avg + ' ms',
+    latency: fmt(s.latency_avg, ' ms'),
+    speed:   '↓ ' + fmt(s.download_avg) + '  ↑ ' + fmt(s.upload_avg) + ' Mbps',
+    loss:    s.packet_loss + '% · ' + fmt(s.jitter_avg, ' ms'),
+    dns:     fmt(s.dns_avg, ' ms'),
   }
 })
 </script>

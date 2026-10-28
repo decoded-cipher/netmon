@@ -266,17 +266,19 @@ func (m *Monitor) runPingCycle() {
 	}
 
 	dnsResults := make([]float64, len(cfg.DNSTargets))
+	dnsOK := make([]bool, len(cfg.DNSTargets))
 	for i, host := range cfg.DNSTargets {
 		wg.Add(1)
 		go func(idx int, h string) {
 			defer wg.Done()
 			d, err := measureDNS(h)
 			ms := float64(d.Microseconds()) / 1000.0
-			dnsResults[idx] = ms
 			if err != nil {
 				m.log.Error("dns failed", "host", h, "error", err)
 				return
 			}
+			dnsResults[idx] = ms
+			dnsOK[idx] = true
 			m.store.UpsertDNSCheck(store.DNSCheck{Host: h, TimeMs: round1(ms), Resolver: "system"})
 		}(i, host)
 	}
@@ -322,12 +324,14 @@ func (m *Monitor) runPingCycle() {
 	}
 
 	var dnsAvg float64
-	for _, d := range dnsResults {
-		dnsAvg += d
+	var dnsCnt int
+	for i, d := range dnsResults {
+		if dnsOK[i] {
+			dnsAvg += d
+			dnsCnt++
+		}
 	}
-	if len(dnsResults) > 0 {
-		dnsAvg /= float64(len(dnsResults))
-	}
+	dnsAvg /= float64(max(dnsCnt, 1))
 
 	avgLat := totalLat / float64(max(latCnt, 1))
 	avgJitter := totalJitter / float64(max(latCnt, 1))
@@ -345,12 +349,12 @@ func (m *Monitor) runPingCycle() {
 	meas := store.Measurement{
 		Time:         time.Now().Format(time.RFC3339),
 		NetworkID:    m.currentNetworkID,
-		Latency:      round1(avgLat),
-		Jitter:       round1(avgJitter),
+		Latency:      measured(avgLat, latCnt > 0),
+		Jitter:       measured(avgJitter, latCnt > 0),
 		PacketLoss:   round1(avgLoss),
-		Download:     round1(down),
-		Upload:       round1(up),
-		DNS:          round1(dnsAvg),
+		Download:     measured(down, down > 0),
+		Upload:       measured(up, up > 0),
+		DNS:          measured(dnsAvg, dnsCnt > 0),
 		ConnType:     connInfo.Type,
 		ConnRSSI:     connInfo.RSSI,
 		ConnNoise:    connInfo.Noise,
@@ -364,7 +368,7 @@ func (m *Monitor) runPingCycle() {
 	if err := m.store.SaveMeasurement(meas); err != nil {
 		m.log.Error("save measurement failed", "error", err)
 	}
-	m.log.Info("ping cycle: done", "latency", meas.Latency, "loss", meas.PacketLoss, "network", meas.NetworkID)
+	m.log.Info("ping cycle: done", "latency", round1(avgLat), "loss", meas.PacketLoss, "network", meas.NetworkID)
 }
 
 func (m *Monitor) runSpeedCycle(ctx context.Context, trigger string) (SpeedTestStatus, error) {
@@ -424,4 +428,12 @@ func (m *Monitor) runSpeedCycle(ctx context.Context, trigger string) (SpeedTestS
 
 func round1(v float64) float64 {
 	return math.Round(v*10) / 10
+}
+
+func measured(v float64, ok bool) *float64 {
+	if !ok {
+		return nil
+	}
+	r := round1(v)
+	return &r
 }

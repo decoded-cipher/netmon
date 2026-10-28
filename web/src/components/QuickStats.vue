@@ -26,15 +26,15 @@
       </div>
       <div class="card-row">
         <span class="card-row-label">Min Latency</span>
-        <span class="card-row-value">{{ minLat }} ms</span>
+        <span class="card-row-value">{{ fmt(summary?.latency_min, ' ms') }}</span>
       </div>
       <div class="card-row">
         <span class="card-row-label">Max Latency</span>
-        <span class="card-row-value">{{ maxLat }} ms</span>
+        <span class="card-row-value">{{ fmt(summary?.latency_max, ' ms') }}</span>
       </div>
       <div class="card-row">
         <span class="card-row-label">Avg Jitter</span>
-        <span class="card-row-value">{{ summary.jitter_avg }} ms</span>
+        <span class="card-row-value">{{ fmt(summary.jitter_avg, ' ms') }}</span>
       </div>
     </div>
   </AccordionCard>
@@ -43,13 +43,12 @@
 <script setup>
 import { computed } from 'vue'
 import AccordionCard from './AccordionCard.vue'
+import { fmt } from '../utils/format.js'
 
 const props = defineProps({ summary: Object, history: Array })
 
 const peakDl = computed(() => {
-  const vals = props.history?.map(h => h.download).filter(v => v > 0) ?? []
+  const vals = props.history?.map(h => h.download).filter(v => v != null) ?? []
   return vals.length ? Math.max(...vals) + ' Mbps' : '—'
 })
-const minLat = computed(() => props.summary?.latency_min ?? (props.history?.length ? Math.min(...props.history.map(h => h.latency)) : '—'))
-const maxLat = computed(() => props.summary?.latency_max ?? (props.history?.length ? Math.max(...props.history.map(h => h.latency)) : '—'))
 </script>

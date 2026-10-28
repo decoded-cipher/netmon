@@ -59,6 +59,7 @@ const loss = computed(() => props.summary ? rateMetric(props.summary.packet_loss
 const spd  = computed(() => {
   if (!props.summary) return null
   const d = props.summary.download_avg
+  if (d == null) return null
   return d >= 50 ? { text: 'Good', color: 'var(--green)' }
        : d >= 25 ? { text: 'Fair', color: 'var(--yellow)' }
        :           { text: 'Poor', color: 'var(--red)' }

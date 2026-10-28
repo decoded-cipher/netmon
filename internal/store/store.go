@@ -72,33 +72,82 @@ func (s *Store) migrate() error {
 	}
 	// Add network_id to measurements table for pre-WiFi databases (no-op if already exists).
 	s.db.Exec(`ALTER TABLE measurements ADD COLUMN network_id TEXT NOT NULL DEFAULT ''`)
+
+	var version int
+	if err := s.db.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
+		return err
+	}
+	if version < 1 {
+		if err := s.migrateNullableMetrics(); err != nil {
+			return fmt.Errorf("nullable metrics: %w", err)
+		}
+	}
 	return nil
+}
+
+// migrateNullableMetrics rebuilds measurements so unmeasured metrics are NULL instead of 0.
+func (s *Store) migrateNullableMetrics() error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	steps := []string{
+		`ALTER TABLE measurements RENAME TO measurements_old`,
+		schemaSQL,
+		`INSERT INTO measurements
+			(id, ts, network_id, latency, jitter, packet_loss, download, upload, dns,
+			 conn_type, conn_rssi, conn_noise, conn_snr, conn_channel, conn_band, conn_link_rate, conn_duplex)
+		SELECT id, ts, network_id,
+			NULLIF(latency, 0), CASE WHEN latency > 0 THEN jitter END, packet_loss,
+			NULLIF(download, 0), NULLIF(upload, 0), dns,
+			conn_type, conn_rssi, conn_noise, conn_snr, conn_channel, conn_band, conn_link_rate, conn_duplex
+		FROM measurements_old`,
+		`DROP TABLE measurements_old`,
+		schemaSQL,
+		`PRAGMA user_version = 1`,
+	}
+	for _, step := range steps {
+		if _, err := tx.Exec(step); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func round1(v float64) float64 {
 	return math.Round(v*10) / 10
 }
 
+func round1Ptr(v *float64) *float64 {
+	if v == nil {
+		return nil
+	}
+	r := round1(*v)
+	return &r
+}
+
 // --- Measurement ---
 
 type Measurement struct {
-	ID           int64   `json:"id"`
-	Time         string  `json:"time"`
-	NetworkID    string  `json:"network_id"`
-	Latency      float64 `json:"latency"`
-	Jitter       float64 `json:"jitter"`
-	PacketLoss   float64 `json:"loss"`
-	Download     float64 `json:"download"`
-	Upload       float64 `json:"upload"`
-	DNS          float64 `json:"dns"`
-	ConnType     string  `json:"conn_type"`
-	ConnRSSI     int     `json:"conn_rssi"`
-	ConnNoise    int     `json:"conn_noise"`
-	ConnSNR      int     `json:"conn_snr"`
-	ConnChannel  int     `json:"conn_channel"`
-	ConnBand     string  `json:"conn_band"`
-	ConnLinkRate int     `json:"conn_link_rate"`
-	ConnDuplex   string  `json:"conn_duplex"`
+	ID           int64    `json:"id"`
+	Time         string   `json:"time"`
+	NetworkID    string   `json:"network_id"`
+	Latency      *float64 `json:"latency"`
+	Jitter       *float64 `json:"jitter"`
+	PacketLoss   float64  `json:"loss"`
+	Download     *float64 `json:"download"`
+	Upload       *float64 `json:"upload"`
+	DNS          *float64 `json:"dns"`
+	ConnType     string   `json:"conn_type"`
+	ConnRSSI     int      `json:"conn_rssi"`
+	ConnNoise    int      `json:"conn_noise"`
+	ConnSNR      int      `json:"conn_snr"`
+	ConnChannel  int      `json:"conn_channel"`
+	ConnBand     string   `json:"conn_band"`
+	ConnLinkRate int      `json:"conn_link_rate"`
+	ConnDuplex   string   `json:"conn_duplex"`
 }
 
 func (s *Store) SaveMeasurement(m Measurement) error {
@@ -183,17 +232,17 @@ func (s *Store) GetHistoryWindow(minutes int) ([]Measurement, error) {
 // --- Summary ---
 
 type Summary struct {
-	LatencyAvg  float64 `json:"latency_avg"`
-	LatencyP95  float64 `json:"latency_p95"`
-	LatencyMin  float64 `json:"latency_min"`
-	LatencyMax  float64 `json:"latency_max"`
-	JitterAvg   float64 `json:"jitter_avg"`
-	PacketLoss  float64 `json:"packet_loss"`
-	DNSAvg      float64 `json:"dns_avg"`
-	DownloadAvg float64 `json:"download_avg"`
-	UploadAvg   float64 `json:"upload_avg"`
-	Uptime24h   float64 `json:"uptime_24h"`
-	Outages24h  int     `json:"outages_24h"`
+	LatencyAvg  *float64 `json:"latency_avg"`
+	LatencyP95  *float64 `json:"latency_p95"`
+	LatencyMin  *float64 `json:"latency_min"`
+	LatencyMax  *float64 `json:"latency_max"`
+	JitterAvg   *float64 `json:"jitter_avg"`
+	PacketLoss  float64  `json:"packet_loss"`
+	DNSAvg      *float64 `json:"dns_avg"`
+	DownloadAvg *float64 `json:"download_avg"`
+	UploadAvg   *float64 `json:"upload_avg"`
+	Uptime24h   float64  `json:"uptime_24h"`
+	Outages24h  int      `json:"outages_24h"`
 }
 
 func (s *Store) GetSummary() (Summary, error) {
@@ -209,14 +258,14 @@ func (s *Store) GetSummary() (Summary, error) {
 		return sum, err
 	}
 
-	sum.LatencyAvg = round1(sum.LatencyAvg)
-	sum.LatencyMin = round1(sum.LatencyMin)
-	sum.LatencyMax = round1(sum.LatencyMax)
-	sum.JitterAvg = round1(sum.JitterAvg)
+	sum.LatencyAvg = round1Ptr(sum.LatencyAvg)
+	sum.LatencyMin = round1Ptr(sum.LatencyMin)
+	sum.LatencyMax = round1Ptr(sum.LatencyMax)
+	sum.JitterAvg = round1Ptr(sum.JitterAvg)
 	sum.PacketLoss = round1(sum.PacketLoss)
-	sum.DNSAvg = round1(sum.DNSAvg)
-	sum.DownloadAvg = round1(sum.DownloadAvg)
-	sum.UploadAvg = round1(sum.UploadAvg)
+	sum.DNSAvg = round1Ptr(sum.DNSAvg)
+	sum.DownloadAvg = round1Ptr(sum.DownloadAvg)
+	sum.UploadAvg = round1Ptr(sum.UploadAvg)
 
 	rows, err := s.db.Query(q["get_latencies"], cutoff)
 	if err == nil {
@@ -232,7 +281,8 @@ func (s *Store) GetSummary() (Summary, error) {
 			if idx >= len(latencies) {
 				idx = len(latencies) - 1
 			}
-			sum.LatencyP95 = round1(latencies[idx])
+			p95 := round1(latencies[idx])
+			sum.LatencyP95 = &p95
 		}
 	}
 

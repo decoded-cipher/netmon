@@ -44,7 +44,7 @@ web/               Vue 3 + Vite frontend
 
 - **Backend changes** — edit files under `internal/`. Run `make vet`, `make test` and `make build` to verify.
 - **Frontend changes** — edit files under `web/src/`. Run `make dev` to get hot-reload (Vite proxies `/api/*` to the Go backend).
-- **Adding a new metric** — add a column to the `measurements` table in `store.go`, update `Measurement` struct, `SaveMeasurement`, and `GetHistory`; wire it through `monitor.go → runPingCycle()`; add a chart in the Vue components.
+- **Adding a new metric** — add a nullable column to the `measurements` table in `schema.sql` (store `NULL`, not `0`, when nothing was measured), add it as a `*float64` to the `Measurement` struct, and update `SaveMeasurement` and `GetHistory`; wire it through `monitor.go → runPingCycle()`; add a chart in the Vue components and format it with `fmt()` from `utils/format.js` so missing values show as "—". Changes to existing columns need a migration in `store.go` that bumps `PRAGMA user_version`.
 
 ## Pull requests
 
