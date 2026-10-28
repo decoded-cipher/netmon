@@ -28,7 +28,7 @@ func DefaultConfig() Config {
 		PingTargets:   []string{"google.com", "cloudflare.com"},
 		DNSTargets:    []string{"google.com", "cloudflare.com"},
 		PingInterval:  60 * time.Second,
-		SpeedInterval: 30 * time.Minute,
+		SpeedInterval: 60 * time.Minute,
 		PingCount:     5,
 		DownloadURL:   "https://speed.cloudflare.com/__down?bytes=1000000",
 		UploadURL:     "https://speed.cloudflare.com/__up",
@@ -252,6 +252,9 @@ func (m *Monitor) runPingCycle() {
 	avgLat := totalLat / float64(max(latCnt, 1))
 	avgJitter := totalJitter / float64(max(latCnt, 1))
 	avgLoss := totalLoss / float64(max(cnt, 1))
+	if cnt == 0 && len(results) > start {
+		avgLoss = 100
+	}
 
 	m.mu.RLock()
 	down := m.lastDown

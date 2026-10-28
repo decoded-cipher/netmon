@@ -140,7 +140,7 @@ async function load() {
     pingTargets.value = (cfg.ping_targets || []).join('\n')
     dnsTargets.value = (cfg.dns_targets || []).join('\n')
     pingInterval.value = cfg.ping_interval_s || 60
-    speedInterval.value = cfg.speed_interval_m || 30
+    speedInterval.value = cfg.speed_interval_m || 60
     pingCount.value = cfg.ping_count || 5
     lastSavedSerialized = serializeConfig()
   } catch {

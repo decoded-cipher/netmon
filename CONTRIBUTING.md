@@ -24,7 +24,7 @@ Dashboard: **http://localhost:8080**
 ```
 cmd/netmon/        main.go — entry point, HTTP server setup
 internal/
-  monitor/         Background workers: ping (60s) and speed test (30m)
+  monitor/         Background workers: ping (60s) and speed test (60m)
     monitor.go     Monitor struct, worker goroutines, ping cycle orchestration
     ping.go        runPing, cross-platform output parsing, DNS measurement
     speed.go       measureDownload, measureUpload

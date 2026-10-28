@@ -149,7 +149,7 @@ const props = defineProps({
   pingTargets: { type: String, default: '' },
   dnsTargets: { type: String, default: '' },
   pingInterval: { type: Number, default: 60 },
-  speedInterval: { type: Number, default: 30 },
+  speedInterval: { type: Number, default: 60 },
   pingCount: { type: Number, default: 5 },
 })
 

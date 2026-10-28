@@ -1,126 +1,140 @@
 package monitor
 
 import (
-	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 )
 
-var speedSteps = []int64{100_000, 1_000_000, 5_000_000, 10_000_000}
-
 const (
-	speedRunsPerStep    = 2
-	speedByteBudget     = 25_000_000
-	speedTimeBudget     = 3 * time.Second
-	speedFinishDuration = time.Second
-	speedMinDuration    = 10 * time.Millisecond
-	speedTestTimeout    = 60 * time.Second
+	speedDownloadBytes = 20_000_000
+	speedUploadBytes   = 10_000_000
+	speedMaxDuration   = 2 * time.Second
+	speedRampFraction  = 0.4
+	speedMinDuration   = 10 * time.Millisecond
+	speedTestTimeout   = 60 * time.Second
 )
 
-type speedSample struct {
+type speedPoint struct {
+	t     time.Time
 	bytes int64
-	dur   time.Duration
 }
 
 func newSpeedClient() *http.Client {
 	return &http.Client{Transport: http.DefaultTransport.(*http.Transport).Clone()}
 }
 
+// measureDownload returns sustained download throughput in Mbps.
 func measureDownload(ctx context.Context, client *http.Client, rawURL string) (float64, error) {
-	if err := warmUp(ctx, client, rawURL); err != nil {
+	if err := warmUp(ctx, client, withBytes(rawURL, 0)); err != nil {
 		return 0, fmt.Errorf("warm-up: %w", err)
 	}
-	return runSpeedSteps(ctx, func(size int64) (speedSample, error) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, withBytes(rawURL, size), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, withBytes(rawURL, speedDownloadBytes), nil)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("status %s", resp.Status)
+	}
+
+	buf := make([]byte, 32*1024)
+	var points []speedPoint
+	var total int64
+	for {
+		n, err := resp.Body.Read(buf)
+		if n > 0 {
+			total += int64(n)
+			points = append(points, speedPoint{t: time.Now(), bytes: total})
+			if points[len(points)-1].t.Sub(points[0].t) >= speedMaxDuration {
+				break
+			}
+		}
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
-			return speedSample{}, err
+			return 0, err
 		}
-		start := time.Now()
-		resp, err := client.Do(req)
-		if err != nil {
-			return speedSample{}, err
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return speedSample{}, fmt.Errorf("status %s", resp.Status)
-		}
-		n, err := io.Copy(io.Discard, resp.Body)
-		if err != nil {
-			return speedSample{}, err
-		}
-		dur := time.Since(start) - serverTime(resp.Header)
-		return speedSample{bytes: n, dur: dur}, nil
-	})
+	}
+	return tailRate(points)
 }
 
+// measureUpload returns upload throughput in Mbps.
 func measureUpload(ctx context.Context, client *http.Client, rawURL string) (float64, error) {
 	if err := warmUp(ctx, client, rawURL); err != nil {
 		return 0, fmt.Errorf("warm-up: %w", err)
 	}
-	return runSpeedSteps(ctx, func(size int64) (speedSample, error) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, bytes.NewReader(make([]byte, size)))
-		if err != nil {
-			return speedSample{}, err
-		}
-		req.Header.Set("Content-Type", "application/octet-stream")
-		start := time.Now()
-		resp, err := client.Do(req)
-		if err != nil {
-			return speedSample{}, err
-		}
-		defer resp.Body.Close()
-		io.Copy(io.Discard, resp.Body)
-		if resp.StatusCode != http.StatusOK {
-			return speedSample{}, fmt.Errorf("status %s", resp.Status)
-		}
-		return speedSample{bytes: size, dur: time.Since(start)}, nil
-	})
+	body := &uploadBody{}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, rawURL, body)
+	if err != nil {
+		return 0, err
+	}
+	req.ContentLength = -1
+	req.Header.Set("Content-Type", "application/octet-stream")
+
+	start := time.Now()
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("status %s", resp.Status)
+	}
+	dur := time.Since(start)
+	if dur < speedMinDuration {
+		return 0, errors.New("transfer too short to measure")
+	}
+	return float64(body.n) * 8 / dur.Seconds() / 1e6, nil
 }
 
-func runSpeedSteps(ctx context.Context, run func(size int64) (speedSample, error)) (float64, error) {
-	var mbps []float64
-	var used int64
-	start := time.Now()
+type uploadBody struct {
+	n     int64
+	start time.Time
+}
 
-steps:
-	for _, size := range speedSteps {
-		for range speedRunsPerStep {
-			if used+size > speedByteBudget || time.Since(start) > speedTimeBudget {
-				break steps
-			}
-			if err := ctx.Err(); err != nil {
-				return 0, err
-			}
-			s, err := run(size)
-			if err != nil {
-				return 0, err
-			}
-			used += s.bytes
-			if s.dur >= speedMinDuration {
-				mbps = append(mbps, float64(s.bytes)*8/s.dur.Seconds()/1e6)
-			}
-			if s.dur >= speedFinishDuration {
-				break steps
-			}
-		}
+func (b *uploadBody) Read(p []byte) (int, error) {
+	if b.start.IsZero() {
+		b.start = time.Now()
 	}
+	if b.n >= speedUploadBytes || time.Since(b.start) >= speedMaxDuration {
+		return 0, io.EOF
+	}
+	p = p[:min(int64(len(p)), speedUploadBytes-b.n)]
+	clear(p)
+	b.n += int64(len(p))
+	return len(p), nil
+}
 
-	if len(mbps) == 0 {
-		return 0, fmt.Errorf("no usable samples")
+func tailRate(points []speedPoint) (float64, error) {
+	if len(points) < 2 {
+		return 0, errors.New("transfer too short to measure")
 	}
-	return percentile(mbps, 0.9), nil
+	first, last := points[0], points[len(points)-1]
+	cut := first.t.Add(time.Duration(float64(last.t.Sub(first.t)) * speedRampFraction))
+	i := sort.Search(len(points), func(i int) bool { return !points[i].t.Before(cut) })
+	from := points[min(i, len(points)-2)]
+	dur := last.t.Sub(from.t)
+	if dur < speedMinDuration {
+		return 0, errors.New("transfer too short to measure")
+	}
+	return float64(last.bytes-from.bytes) * 8 / dur.Seconds() / 1e6, nil
 }
 
 func warmUp(ctx context.Context, client *http.Client, rawURL string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, withBytes(rawURL, 0), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, rawURL, nil)
 	if err != nil {
 		return err
 	}
@@ -144,32 +158,4 @@ func withBytes(rawURL string, n int64) string {
 	q.Set("bytes", strconv.FormatInt(n, 10))
 	u.RawQuery = q.Encode()
 	return u.String()
-}
-
-func serverTime(h http.Header) time.Duration {
-	var total float64
-	for _, v := range h.Values("Server-Timing") {
-		for _, metric := range strings.Split(v, ",") {
-			parts := strings.Split(strings.TrimSpace(metric), ";")
-			if !strings.HasPrefix(parts[0], "cfSpeed") {
-				continue
-			}
-			for _, p := range parts[1:] {
-				if d, ok := strings.CutPrefix(strings.TrimSpace(p), "dur="); ok {
-					if ms, err := strconv.ParseFloat(d, 64); err == nil {
-						total += ms
-					}
-				}
-			}
-		}
-	}
-	return time.Duration(total * float64(time.Millisecond))
-}
-
-func percentile(vals []float64, p float64) float64 {
-	sorted := append([]float64(nil), vals...)
-	sort.Float64s(sorted)
-	idx := p * float64(len(sorted)-1)
-	lo, hi := int(math.Floor(idx)), int(math.Ceil(idx))
-	return sorted[lo] + (sorted[hi]-sorted[lo])*(idx-float64(lo))
 }

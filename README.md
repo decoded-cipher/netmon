@@ -22,7 +22,7 @@ A lightweight, self-hosted network monitoring dashboard. Tracks latency, jitter,
 - **Settings UI** — configure ping targets, DNS targets, and intervals directly from the dashboard; changes persist across restarts
 - **`config.json`** — file-based defaults loaded at startup; overridden by any settings saved via the UI
 - **No CGO** — pure-Go SQLite driver, stdlib HTTP server; no C compiler required to build or run
-- **Lightweight** — pings every 60s, speed test every 30min (1 MB); negligible network overhead
+- **Lightweight** — pings every 60s, speed test every 60min (~25 MB, about 600 MB/day)
 - **SQLite storage** — no database server; data persists in a single file
 - **Cross-platform** — runs on Linux (x86, ARM/Pi), macOS, Windows, and Docker
 
@@ -109,8 +109,8 @@ Settings are resolved in this order — each step overrides the previous:
 | Ping targets | `google.com`, `cloudflare.com` | Hosts to measure latency/loss against |
 | DNS targets | `google.com`, `cloudflare.com` | Hosts to measure DNS resolution time |
 | Ping interval | `60s` | How often to run a ping cycle |
-| Speed test interval | `30m` | How often to test download/upload |
-| Speed test size | `1 MB` | Payload size (kept small to avoid hogging the link) |
+| Speed test interval | `60m` | How often to test download/upload; each test uses ~25 MB, so raise this on metered links |
+| Speed test size | `≤20 MB` down, `≤10 MB` up | Each direction stops after 2s; download reports the rate after ramp-up |
 | HTTP port | `:8080` | Dashboard address |
 
 
@@ -132,7 +132,7 @@ web/
 
 **Data flow:**
 1. `pingWorker` pings all targets concurrently, resolves DNS, detects network — saves a `Measurement` row every 60s
-2. `speedWorker` downloads/uploads 1 MB to Cloudflare every 30 min — updates latest bandwidth values
+2. `speedWorker` streams a ~2s download and upload to Cloudflare every 60 min — updates latest bandwidth values
 3. Dashboard polls `GET /api/data` every 15s and renders charts client-side
 
 
