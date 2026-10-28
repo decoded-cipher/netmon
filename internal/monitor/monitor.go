@@ -120,7 +120,7 @@ func (m *Monitor) pingWorker(ctx context.Context) {
 }
 
 func (m *Monitor) speedWorker(ctx context.Context) {
-	m.runSpeedCycle()
+	m.runSpeedCycle(ctx)
 
 	ticker := time.NewTicker(m.cfg.SpeedInterval)
 	defer ticker.Stop()
@@ -131,7 +131,7 @@ func (m *Monitor) speedWorker(ctx context.Context) {
 			m.log.Info("speed worker stopped")
 			return
 		case <-ticker.C:
-			m.runSpeedCycle()
+			m.runSpeedCycle(ctx)
 		}
 	}
 }
@@ -226,15 +226,19 @@ func (m *Monitor) runPingCycle() {
 		start = 1
 	}
 	var totalLat, totalJitter, totalLoss float64
-	var cnt int
+	var cnt, latCnt int
 	for _, r := range results[start:] {
 		if r.Err != nil {
 			continue
 		}
-		totalLat += r.AvgMs
-		totalJitter += r.JitterMs
 		totalLoss += r.PacketLoss
 		cnt++
+		if r.PacketLoss >= 100 {
+			continue
+		}
+		totalLat += r.AvgMs
+		totalJitter += r.JitterMs
+		latCnt++
 	}
 
 	var dnsAvg float64
@@ -245,8 +249,8 @@ func (m *Monitor) runPingCycle() {
 		dnsAvg /= float64(len(dnsResults))
 	}
 
-	avgLat := totalLat / float64(max(cnt, 1))
-	avgJitter := totalJitter / float64(max(cnt, 1))
+	avgLat := totalLat / float64(max(latCnt, 1))
+	avgJitter := totalJitter / float64(max(latCnt, 1))
 	avgLoss := totalLoss / float64(max(cnt, 1))
 
 	m.mu.RLock()
@@ -279,17 +283,23 @@ func (m *Monitor) runPingCycle() {
 	m.log.Info("ping cycle: done", "latency", meas.Latency, "loss", meas.PacketLoss, "network", meas.NetworkID)
 }
 
-func (m *Monitor) runSpeedCycle() {
+func (m *Monitor) runSpeedCycle(ctx context.Context) {
 	m.log.Info("speed test: start")
 
-	down, err := measureDownload(m.cfg.DownloadURL)
+	cfg := m.GetConfig()
+	ctx, cancel := context.WithTimeout(ctx, speedTestTimeout)
+	defer cancel()
+	client := newSpeedClient()
+	defer client.CloseIdleConnections()
+
+	down, err := measureDownload(ctx, client, cfg.DownloadURL)
 	if err != nil {
 		m.log.Error("download test failed", "error", err)
 	} else {
 		m.log.Info("download", "mbps", math.Round(down*100)/100)
 	}
 
-	up, err := measureUpload(m.cfg.UploadURL)
+	up, err := measureUpload(ctx, client, cfg.UploadURL)
 	if err != nil {
 		m.log.Error("upload test failed", "error", err)
 	} else {
