@@ -35,6 +35,9 @@ jobs:
         run: npm ci && npm run build
         working-directory: web
 
+      - name: Test
+        run: go test -race ./...
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 

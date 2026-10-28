@@ -16,10 +16,10 @@ FROM measurements WHERE ts >= ? ORDER BY ts ASC;
 
 -- name: get_summary_stats
 SELECT
-	COALESCE(AVG(latency),    0),
-	COALESCE(MIN(latency),    0),
+	COALESCE(AVG(NULLIF(latency, 0)), 0),
+	COALESCE(MIN(NULLIF(latency, 0)), 0),
 	COALESCE(MAX(latency),    0),
-	COALESCE(AVG(jitter),     0),
+	COALESCE(AVG(CASE WHEN latency > 0 THEN jitter END), 0),
 	COALESCE(AVG(packet_loss),0),
 	COALESCE(AVG(dns),        0),
 	COALESCE(AVG(NULLIF(download, 0)), 0),
@@ -27,7 +27,7 @@ SELECT
 FROM measurements WHERE ts >= ?;
 
 -- name: get_latencies
-SELECT latency FROM measurements WHERE ts >= ? ORDER BY latency;
+SELECT latency FROM measurements WHERE ts >= ? AND latency > 0 ORDER BY latency;
 
 -- name: count_measurements
 SELECT COUNT(*) FROM measurements WHERE ts >= ?;

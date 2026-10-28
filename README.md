@@ -92,6 +92,7 @@ make run        # build frontend + run via go run
 make dmg        # build binary and package as a macOS DMG → dist/netmon.dmg
 make clean      # remove binary, database, and web/dist
 make vet        # run go vet on all packages
+make test       # run tests with the race detector
 make docker     # build Docker image
 make docker-run # build + run Docker container
 ```

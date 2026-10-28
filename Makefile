@@ -2,7 +2,7 @@ BINARY  := netmon
 CMD     := ./cmd/netmon
 IMAGE   := netmon
 
-.PHONY: build ui run dev clean vet docker docker-run dmg
+.PHONY: build ui run dev clean vet test docker docker-run dmg
 
 ui:
 	cd web && npm install && npm run build
@@ -33,6 +33,9 @@ clean:
 
 vet:
 	go vet ./...
+
+test:
+	go test -race ./...
 
 docker:
 	docker build -f infra/Dockerfile -t $(IMAGE) .

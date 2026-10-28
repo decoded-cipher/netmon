@@ -42,7 +42,7 @@ web/               Vue 3 + Vite frontend
 
 ## Making changes
 
-- **Backend changes** — edit files under `internal/`. Run `make vet` and `make build` to verify.
+- **Backend changes** — edit files under `internal/`. Run `make vet`, `make test` and `make build` to verify.
 - **Frontend changes** — edit files under `web/src/`. Run `make dev` to get hot-reload (Vite proxies `/api/*` to the Go backend).
 - **Adding a new metric** — add a column to the `measurements` table in `store.go`, update `Measurement` struct, `SaveMeasurement`, and `GetHistory`; wire it through `monitor.go → runPingCycle()`; add a chart in the Vue components.
 
@@ -50,7 +50,7 @@ web/               Vue 3 + Vite frontend
 
 1. Fork the repo and create a branch from `master`
 2. Keep changes focused — one logical change per PR
-3. Run `make vet` before pushing
+3. Run `make vet` and `make test` before pushing
 4. Describe *why* the change is needed in the PR description, not just what changed
 
 ## Reporting issues
