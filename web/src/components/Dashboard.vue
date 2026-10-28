@@ -279,7 +279,7 @@ const chartConfigs = computed(() => {
 
   const base = {
     chart: { type: 'area', background: 'transparent', fontFamily: "'Inter',sans-serif", toolbar: { show: false }, height: chartH, animations: { speed: 500 }, zoom: { enabled: false } },
-    stroke: { curve: 'smooth', width: 2 },
+    stroke: { curve: 'monotoneCubic', width: 2 },
     markers: { size: times.length > 0 && times.length <= 5 ? 4 : 0, hover: { size: 5 } },
     grid: { borderColor: 'var(--border)', strokeDashArray: 4, xaxis: { lines: { show: false } }, yaxis: { lines: { show: true } }, padding: { top: -8, right: 0, bottom: 0, left: 13.5 } },
     xaxis: { categories: times, tickAmount: tick, labels: { style: ls, rotate: 0, hideOverlappingLabels: true, maxHeight: 30 }, axisBorder: { show: true, color: 'var(--border)' }, axisTicks: { show: false } },
@@ -303,7 +303,7 @@ const chartConfigs = computed(() => {
         { opposite: true, forceNiceScale: true, min: 0, axisBorder: { show: false }, axisTicks: { show: false }, title: { text: 'Jitter ms', style: { fontSize: '10px', color: 'var(--muted)' } }, labels: { style: { colors: 'var(--muted)', fontSize: '10px' } } },
       ],
     },
-    dns: { ...base, series: [{ name: 'DNS (ms)', data: h.map(x => x.dns || null) }], colors: ['#8b5cf6'], fill: fill(), yaxis: { ...base.yaxis, min: 0 } },
+    dns: { ...base, series: [{ name: 'DNS (ms)', data: h.map(x => x.dns) }], colors: ['#8b5cf6'], fill: fill(), yaxis: { ...base.yaxis, min: 0 } },
   }
 })
 
