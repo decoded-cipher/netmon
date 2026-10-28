@@ -22,8 +22,8 @@ SELECT
 	COALESCE(AVG(jitter),     0),
 	COALESCE(AVG(packet_loss),0),
 	COALESCE(AVG(dns),        0),
-	COALESCE(AVG(download),   0),
-	COALESCE(AVG(upload),     0)
+	COALESCE(AVG(NULLIF(download, 0)), 0),
+	COALESCE(AVG(NULLIF(upload, 0)),   0)
 FROM measurements WHERE ts >= ?;
 
 -- name: get_latencies

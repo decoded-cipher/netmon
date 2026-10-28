@@ -15,6 +15,8 @@ import (
 
 var errNoPingStats = errors.New("no ping statistics in output")
 
+var replyTimeRe = regexp.MustCompile(`time[=<]([\d.]+) ?ms`)
+
 type pingResult struct {
 	Host       string
 	IP         string
@@ -66,17 +68,16 @@ func parsePingUnix(text string) (avg, jitter, loss float64, err error) {
 		return 0, 0, 0, errNoPingStats
 	}
 	loss, _ = strconv.ParseFloat(m[1], 64)
-	// macOS: min/avg/max/stddev — Linux: min/avg/max/mdev
-	rttRe := regexp.MustCompile(`min/avg/max/\w+ = [\d.]+/([\d.]+)/[\d.]+/([\d.]+)`)
+	// macOS: min/avg/max/stddev — Linux: min/avg/max/mdev — BusyBox: min/avg/max
+	rttRe := regexp.MustCompile(`min/avg/max(?:/\w+)? = [\d.]+/([\d.]+)/`)
 	if m := rttRe.FindStringSubmatch(text); m != nil {
 		avg, _ = strconv.ParseFloat(m[1], 64)
-		jitter, _ = strconv.ParseFloat(m[2], 64)
 	}
+	jitter = replyJitter(text)
 	return
 }
 
 // parsePingWindows handles Windows ping output.
-// Windows doesn't report stddev; jitter is approximated as (max-min)/2.
 func parsePingWindows(text string) (avg, jitter, loss float64, err error) {
 	lossRe := regexp.MustCompile(`\((\d+)% loss\)`)
 	m := lossRe.FindStringSubmatch(text)
@@ -85,20 +86,29 @@ func parsePingWindows(text string) (avg, jitter, loss float64, err error) {
 	}
 	loss, _ = strconv.ParseFloat(m[1], 64)
 	avgRe := regexp.MustCompile(`Average = (\d+)ms`)
-	minRe := regexp.MustCompile(`Minimum = (\d+)ms`)
-	maxRe := regexp.MustCompile(`Maximum = (\d+)ms`)
 	if m := avgRe.FindStringSubmatch(text); m != nil {
 		avg, _ = strconv.ParseFloat(m[1], 64)
 	}
-	var minMs, maxMs float64
-	if m := minRe.FindStringSubmatch(text); m != nil {
-		minMs, _ = strconv.ParseFloat(m[1], 64)
-	}
-	if m := maxRe.FindStringSubmatch(text); m != nil {
-		maxMs, _ = strconv.ParseFloat(m[1], 64)
-	}
-	jitter = (maxMs - minMs) / 2
+	jitter = replyJitter(text)
 	return
+}
+
+// replyJitter returns the mean absolute difference between consecutive reply RTTs.
+func replyJitter(text string) float64 {
+	var prev, sum float64
+	var n int
+	for i, m := range replyTimeRe.FindAllStringSubmatch(text, -1) {
+		rtt, _ := strconv.ParseFloat(m[1], 64)
+		if i > 0 {
+			sum += math.Abs(rtt - prev)
+			n++
+		}
+		prev = rtt
+	}
+	if n == 0 {
+		return 0
+	}
+	return sum / float64(n)
 }
 
 func resolveIP(host string) string {

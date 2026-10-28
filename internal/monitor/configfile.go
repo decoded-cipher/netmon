@@ -19,22 +19,22 @@ type fileConfig struct {
 
 // LoadConfigFile reads a JSON config file and returns a Config.
 // Fields that are missing or zero-valued fall back to DefaultConfig.
-// Returns (default config, nil) if the file does not exist.
-func LoadConfigFile(path string) (Config, error) {
+// Returns (default config, false, nil) if the file does not exist.
+func LoadConfigFile(path string) (Config, bool, error) {
 	def := DefaultConfig()
 
 	f, err := os.Open(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return def, nil
+			return def, false, nil
 		}
-		return def, err
+		return def, false, err
 	}
 	defer f.Close()
 
 	var fc fileConfig
 	if err := json.NewDecoder(f).Decode(&fc); err != nil {
-		return def, err
+		return def, false, err
 	}
 
 	cfg := def
@@ -59,5 +59,5 @@ func LoadConfigFile(path string) (Config, error) {
 	if fc.UploadURL != "" {
 		cfg.UploadURL = fc.UploadURL
 	}
-	return cfg, nil
+	return cfg, true, nil
 }

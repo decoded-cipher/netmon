@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"netmon/internal/monitor"
 	"netmon/internal/server"
@@ -33,11 +37,11 @@ func main() {
 	defer s.Close()
 
 	// Priority: DB saved config > config.json > hardcoded defaults.
-	cfg, err := monitor.LoadConfigFile("config.json")
+	cfg, found, err := monitor.LoadConfigFile("config.json")
 	if err != nil {
 		log.Error("config file error, using defaults", "error", err)
 		cfg = monitor.DefaultConfig()
-	} else {
+	} else if found {
 		log.Info("loaded config from config.json")
 	}
 	if cs, err := s.GetConfig(); err == nil {
@@ -45,8 +49,8 @@ func main() {
 		log.Info("loaded config from database")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	mon := monitor.New(cfg, s, log)
 	mon.Start(ctx)
@@ -67,11 +71,22 @@ func main() {
 	mux.HandleFunc("POST /api/update", h.TriggerUpdate)
 	mux.Handle("/", http.FileServer(http.FS(distFS)))
 
-	log.Info("starting server", "addr", ":8080")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
-		log.Error("server stopped", "error", err)
-	}
+	srv := &http.Server{Addr: ":8080", Handler: mux}
+	go func() {
+		log.Info("starting server", "addr", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("server stopped", "error", err)
+			stop()
+		}
+	}()
 
-	cancel()
+	<-ctx.Done()
+	log.Info("shutting down")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Error("server shutdown failed", "error", err)
+	}
 	mon.Wait()
+	log.Info("shutdown complete")
 }

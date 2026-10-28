@@ -310,12 +310,8 @@ func (m *Monitor) runSpeedCycle(ctx context.Context) {
 	}
 
 	m.mu.Lock()
-	if down > 0 {
-		m.lastDown = math.Round(down*100) / 100
-	}
-	if up > 0 {
-		m.lastUp = math.Round(up*100) / 100
-	}
+	m.lastDown = math.Round(down*100) / 100
+	m.lastUp = math.Round(up*100) / 100
 	m.mu.Unlock()
 
 	m.log.Info("speed test: done")
